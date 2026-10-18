@@ -36,25 +36,72 @@ class LogisticRegressionModel:
     weights: torch.Tensor
     ## Sesgo escalar (tensor de forma ()).
     bias: torch.Tensor
-    ## Pérdida de entropía cruzada registrada en cada época de entrenamiento.
+    ## Entropía cruzada media antes del entrenamiento y después de cada época
+    ## (epochs + 1 valores).
     loss_history: list = field(default_factory=list)
+
+
+def _sigmoid(z):
+    """!
+    @brief Calcula la sigmoide 1 / (1 + e^(-z)) sin desbordamientos.
+
+    Se usa e^(-|z|), que siempre está en (0, 1]: para z >= 0 se evalúa
+    1 / (1 + e^(-z)) y para z < 0 la forma equivalente e^z / (1 + e^z). Así
+    ninguna rama produce infinitos, ni en el valor ni en su gradiente.
+
+    @param z Tensor de logits.
+    @return Tensor de la misma forma con valores en [0, 1].
+    """
+    exp_neg_abs = torch.exp(-z.abs())
+    return torch.where(z >= 0, 1.0 / (1.0 + exp_neg_abs), exp_neg_abs / (1.0 + exp_neg_abs))
+
+
+def _cross_entropy(X, y, weights, bias):
+    """!
+    @brief Calcula la entropía cruzada binaria media a partir de los logits.
+
+    Con z = Xw + b, la pérdida de cada muestra es log(1 + e^z) - y z, que es
+    igual a -[y log p + (1 - y) log(1 - p)] con p = sigmoide(z), pero no se
+    indefine cuando p vale exactamente 0 o 1. El término log(1 + e^z) se
+    evalúa como max(z, 0) + log(1 + e^(-|z|)).
+
+    @param X Tensor de forma (n, D).
+    @param y Etiquetas 0/1 en punto flotante, forma (n,).
+    @param weights Tensor de forma (D,).
+    @param bias Tensor escalar.
+    @return Pérdida media (float).
+    """
+    logits = X @ weights + bias
+    softplus = logits.clamp(min=0) + torch.log1p(torch.exp(-logits.abs()))
+    return float((softplus - y * logits).mean())
 
 
 def forward(X, weights, bias):
     """!
     @brief Evalúa el modelo: p(y = 1 | x) = sigmoide(x · w + b).
+
+    Implementación propia y vectorizada: un producto matriz-vector para los
+    logits de las n muestras y la sigmoide estable `_sigmoid`.
+
     @param X Tensor de forma (n, D).
     @param weights Tensor de forma (D,).
     @param bias Tensor escalar.
     @return Tensor de forma (n,) con probabilidades en [0, 1].
     """
-    # TODO(punto 1.1): implementar de forma vectorizada con operaciones de PyTorch.
-    raise NotImplementedError("Punto 1.1: implementar forward.")
+    return _sigmoid(X @ weights + bias)
 
 
 def train_logistic_regression(X, y, learning_rate=0.1, epochs=1000, seed=None):
     """!
     @brief Entrena la regresión logística minimizando la entropía cruzada binaria.
+
+    Implementación propia con descenso del gradiente por lotes completos. En
+    cada época se evalúa el modelo con `forward` y se aplica el gradiente
+    exacto de la entropía cruzada media:
+    dL/dw = X^T (p - y) / n y dL/db = media(p - y).
+    Los pesos parten de una normal con desviación 0.01 (generada con `seed`)
+    y el sesgo, de cero.
+
     @param X Tensor de entrenamiento de forma (n, D).
     @param y Etiquetas 0/1 de forma (n,).
     @param learning_rate Tasa de aprendizaje del descenso del gradiente.
@@ -62,9 +109,33 @@ def train_logistic_regression(X, y, learning_rate=0.1, epochs=1000, seed=None):
     @param seed Semilla para inicializar los parámetros; `None` no fija la semilla.
     @return LogisticRegressionModel con pesos, sesgo e historial de pérdida.
     """
-    # TODO(punto 1.2): inicializar los parámetros con `seed`, evaluar con `forward`,
-    # calcular la pérdida y actualizar con Autograd (o un optimizador de torch.optim).
-    raise NotImplementedError("Punto 1.2: implementar train_logistic_regression.")
+    X = torch.as_tensor(X)
+    if not X.is_floating_point():
+        X = X.to(torch.float32)
+    y = torch.as_tensor(y, device=X.device).to(X.dtype)
+    if X.ndim != 2 or y.shape != (X.shape[0],):
+        raise ValueError(f"Se esperaba X de forma (n, D) e y de forma (n,); se recibió "
+                         f"{tuple(X.shape)} y {tuple(y.shape)}.")
+    if learning_rate <= 0 or epochs < 0:
+        raise ValueError("learning_rate debe ser positiva y epochs no negativa.")
+
+    generator = torch.Generator()
+    if seed is None:
+        generator.seed()
+    else:
+        generator.manual_seed(seed)
+    n_samples, n_features = X.shape
+    weights = (0.01 * torch.randn(n_features, generator=generator, dtype=X.dtype)).to(X.device)
+    bias = torch.zeros((), dtype=X.dtype, device=X.device)
+
+    loss_history = [_cross_entropy(X, y, weights, bias)]
+    for _ in range(epochs):
+        error = forward(X, weights, bias) - y
+        weights = weights - learning_rate * (X.T @ error) / n_samples
+        bias = bias - learning_rate * error.mean()
+        loss_history.append(_cross_entropy(X, y, weights, bias))
+
+    return LogisticRegressionModel(weights=weights, bias=bias, loss_history=loss_history)
 
 
 def predict_proba(model, X):

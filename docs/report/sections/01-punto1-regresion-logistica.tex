@@ -5,12 +5,49 @@
 
 \subsection{Evaluación del modelo}
 
-TODO (punto 1.1): describir la función \texttt{forward}.
+La regresión logística modela la probabilidad de que un mensaje sea spam como
+\[
+    p(y=1\mid x) = \sigma(x^\top w + b), \qquad \sigma(z) = \frac{1}{1+e^{-z}}.
+\]
+La función \texttt{forward} es una implementación propia en PyTorch
+\cite{paszke2019pytorch}, sin \texttt{torch.nn}. Calcula los logits
+$z = Xw + b$ de las $n$ muestras con un único producto matriz-vector y les
+aplica la sigmoide. Para que la sigmoide no se desborde con logits grandes,
+se evalúa con $e^{-|z|}\in(0,1]$:
+\[
+    \sigma(z) =
+    \begin{cases}
+        \dfrac{1}{1+e^{-|z|}} & z \geq 0,\\[2ex]
+        \dfrac{e^{-|z|}}{1+e^{-|z|}} & z < 0.
+    \end{cases}
+\]
+Ninguna de las dos ramas produce infinitos, ni en el valor ni en el
+gradiente, mientras que la forma directa $1/(1+e^{-z})$ calcula $e^{1000}$
+para $z=-1000$ y su gradiente con Autograd resulta indefinido.
 
 \subsection{Entrenamiento}
 
-TODO (punto 1.2): describir \texttt{train\_logistic\_regression}: pérdida,
-inicialización, optimizador e hiperparámetros.
+La función \texttt{train\_logistic\_regression} minimiza la entropía cruzada
+binaria media
+\[
+    L(w,b) = -\frac{1}{n}\sum_{i=1}^{n}
+    \left[y_i\log p_i + (1-y_i)\log(1-p_i)\right],
+    \qquad p_i = \sigma(x_i^\top w + b),
+\]
+con descenso del gradiente por lotes completos, también implementado sin
+optimizadores de PyTorch. En cada época se evalúa $p$ con \texttt{forward} y
+se aplica el gradiente exacto de $L$:
+\[
+    w \leftarrow w - \frac{\alpha}{n} X^\top (p - y), \qquad
+    b \leftarrow b - \frac{\alpha}{n} \sum_{i=1}^{n} (p_i - y_i).
+\]
+Los pesos se inicializan con una normal de desviación $0.01$ generada con la
+semilla de la corrida y el sesgo, en cero, de modo que la misma semilla
+reproduce el mismo modelo. El entrenamiento ejecuta un número fijo de épocas
+con una tasa de aprendizaje $\alpha$ fija (TODO: reportar los valores
+calibrados). El historial de pérdida guarda la pérdida inicial y la de cada
+época, calculada como $\log(1+e^{z_i}) - y_i z_i$, expresión equivalente a la
+entropía cruzada que no se indefine cuando $p_i$ vale exactamente 0 o 1.
 
 \subsection{Verificación con datos linealmente separables}
 

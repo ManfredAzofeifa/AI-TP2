@@ -14,8 +14,9 @@ funciona como `main`: importa los archivos, los combina en los experimentos y
 exporta figuras y tablas a `results/`, que el informe LaTeX de `docs/report/`
 usa para responder el enunciado.
 
-**Las tareas pendientes, las restricciones del proyecto y los pasos para
-trabajar (personas o agentes de IA) están en [TODO.md](TODO.md).**
+**Las tareas pendientes, las reglas del proyecto y los pasos para trabajar
+están en [TODO.md](TODO.md) (personas) y [AGENTS.md](AGENTS.md) (agentes de
+IA).**
 
 ## Entregables
 
@@ -35,7 +36,8 @@ en [TODO.md](TODO.md#checklist-de-entrega).
 
 ```text
 AI-TP2/
-├── TODO.md                     tareas, restricciones y checklist de entrega
+├── AGENTS.md                   instrucciones para agentes de IA
+├── TODO.md                     tareas, reglas y checklist de entrega (personas)
 ├── data/                       dataset descargado y cachés (excluidos de Git)
 ├── docs/
 │   ├── assignment/             enunciado original
@@ -59,7 +61,7 @@ AI-TP2/
 
 | Punto | Archivo | Pruebas | Sección del informe | Estado |
 |---|---|---|---|---|
-| 1. Regresión logística (60) | `src/tp2/punto1.py` | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | pendiente |
+| 1. Regresión logística (60) | `src/tp2/punto1.py` | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1 y 1.2 listos |
 | 2. Detección de anomalías (30) | `src/tp2/punto2.py` | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | pendiente |
 | 3. Modelos de lenguaje (10 + 20 extra) | `src/tp2/punto3.py` | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
 | Infraestructura compartida | `src/tp2/utils.py` | `tests/test_utils.py` | — | listo |
@@ -96,8 +98,7 @@ flowchart LR
   la $D$ óptima (1.5). Se puede programar y probar antes con tensores
   sintéticos y una $D$ provisional.
 - El punto 3 solo usa los textos originales y `utils.py`: es independiente.
-- El punto 1 vale 60 puntos y es la ruta crítica; ver la sugerencia de
-  reparto en [TODO.md](TODO.md#organización-un-archivo-por-punto).
+- El punto 1 vale 60 puntos y es la ruta crítica.
 
 ## Preparación del entorno
 
@@ -163,9 +164,9 @@ python3 -m pytest
 py -m pytest
 ```
 
-En el estado inicial del esqueleto el resultado es 14 superadas y 8
-pendientes. Las pruebas sin implementar aparecen como omitidas con el motivo
-`Pendiente`. `tests/test_module_independence.py` falla si un archivo de
+El resultado esperado en cada momento está en el "Estado actual" de
+[TODO.md](TODO.md#estado-actual). Las pruebas sin implementar aparecen como
+omitidas con el motivo `Pendiente`. `tests/test_module_independence.py` falla si un archivo de
 `src/tp2/` importa a otro del paquete o si importa al inicio una dependencia
 opcional.
 
@@ -195,12 +196,12 @@ El script descarta los archivos intermedios y deja únicamente el PDF generado
 en `submission/tp2_detector_spam.pdf`. (En el TP1 el script creaba
 `submissions/` pero copiaba a `submission/`; aquí ambas rutas coinciden).
 
-## Estado de verificación del esqueleto
+## Estado de verificación
 
 - `pytest` y las celdas de configuración y de pruebas del notebook se
   ejecutaron correctamente en Windows con Python 3.14.
 - La descarga del dataset real, la compilación del informe y Doxygen no se
-  han probado todavía; ver [TODO.md](TODO.md#verificación-pendiente-del-esqueleto).
+  han probado todavía; ver [TODO.md](TODO.md#verificación-pendiente).
 
 ## Equipo
 

@@ -4,12 +4,46 @@
 El enunciado exige al menos dos pruebas unitarias para \texttt{forward} y
 dos para \texttt{train\_logistic\_regression}. Las pruebas están en
 \texttt{tests/test\_punto1.py} y se ejecutan en la sección ``Pruebas
-unitarias'' del notebook y con \texttt{pytest}.
+unitarias'' del notebook y con \texttt{pytest}. Cada prueba es una función
+documentada con Doxygen que falla mediante \texttt{assert} o
+\texttt{torch.testing.assert\_close} si el resultado no coincide con el
+esperado.
 
 \subsection{Evaluación del modelo}
 
-TODO (punto 1.1a): describir cada prueba de \texttt{forward} y qué verifica.
+\begin{description}
+    \item[\texttt{test\_forward\_zero\_parameters\_returns\_one\_half}] Evalúa
+    cinco muestras aleatorias en $\mathbb{R}^3$ con $w=0$ y $b=0$. El logit
+    es 0 para cualquier entrada y $\sigma(0)=0.5$, así que todas las
+    probabilidades deben valer $0.5$. La prueba verifica además que la salida
+    tenga forma $(5,)$, una probabilidad por muestra.
+    \item[\texttt{test\_forward\_matches\_sigmoid\_and\_is\_stable}] Con
+    $X=\begin{pmatrix}1&2\\0&0\\-1&-1\end{pmatrix}$, $w=(0.5,-1)$ y
+    $b=0.25$, los logits son $-1.25$, $0.25$ y $0.75$; las probabilidades
+    se comparan con $1/(1+e^{-z})$ calculado con la biblioteca estándar de
+    Python. Luego evalúa logits de $\pm1000$: la salida debe valer 1 y 0 y
+    el gradiente respecto de $w$ debe ser finito. Verifica la fórmula y la
+    estabilidad numérica; la forma directa de la sigmoide no supera esta
+    prueba porque su gradiente resulta indefinido.
+\end{description}
 
 \subsection{Entrenamiento}
 
-TODO (punto 1.2a): describir cada prueba del entrenamiento y qué verifica.
+\begin{description}
+    \item[\texttt{test\_train\_follows\_cross\_entropy\_gradient}] Sobre 200
+    puntos en $\mathbb{R}^3$ con clases que se traslapan, compara el primer
+    paso del entrenamiento con $w_1 = w_0 - \alpha\nabla_w L(w_0)$ y
+    $b_1 = b_0 - \alpha\,\partial L/\partial b$, donde el gradiente de
+    referencia se obtiene con Autograd sobre
+    \texttt{binary\_cross\_entropy\_with\_logits} de PyTorch, independiente
+    de la fórmula cerrada que usa la implementación. También comprueba que la
+    pérdida inicial registrada coincida con la de referencia y que, en 50
+    épocas, la pérdida no aumente en ninguna época y termine por debajo de la
+    inicial. Una implementación que no promedie el gradiente entre las
+    muestras no supera esta prueba.
+    \item[\texttt{test\_train\_separates\_linearly\_separable\_data}] Entrena
+    sobre seis puntos en dos grupos separables por una recta y verifica que
+    el modelo clasifique correctamente todos los puntos. Entrena una segunda
+    vez con la misma semilla y verifica que los pesos y el sesgo sean
+    exactamente iguales, es decir, que el entrenamiento sea reproducible.
+\end{description}

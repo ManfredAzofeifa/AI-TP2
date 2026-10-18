@@ -1,8 +1,9 @@
 # Guía de colaboración
 
-Las tareas, las restricciones del proyecto (independencia de archivos,
-contratos y protocolo experimental) y la checklist de entrega están en
-[TODO.md](TODO.md). Esta guía cubre el flujo de trabajo con Git y el notebook.
+Las tareas, las reglas del proyecto (independencia de archivos, contratos y
+protocolo experimental) y la checklist de entrega están en [TODO.md](TODO.md);
+los agentes de IA siguen [AGENTS.md](AGENTS.md). Esta guía cubre el flujo de
+trabajo con Git y el notebook.
 
 ## Flujo de Git
 
@@ -15,8 +16,8 @@ contratos y protocolo experimental) y la checklist de entrega están en
 
 ## Propiedad de los archivos
 
-Cada persona es dueña de los archivos de su punto (ver la tabla de
-responsables en [TODO.md](TODO.md#organización-un-archivo-por-punto)):
+Cada punto tiene sus propios archivos; quien trabaja un punto edita solo
+estos:
 
 | Punto | Archivos |
 |---|---|
@@ -55,5 +56,5 @@ fusionar:
 - El notebook abre sin errores y conserva un orden de ejecución comprensible.
 - Las funciones nuevas contienen documentación compatible con Doxygen.
 - Los cambios relacionados se reflejan en el informe LaTeX cuando corresponde.
-- Las casillas correspondientes de `TODO.md` están marcadas.
+- `TODO.md` y `AGENTS.md` están actualizados (casillas y estado actual).
 - No se agregaron cachés, entornos virtuales ni resultados sin revisar.

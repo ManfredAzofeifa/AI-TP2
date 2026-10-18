@@ -12,7 +12,7 @@
 - [ ] El notebook fue reiniciado y ejecutado en orden cuando aplica.
 - [ ] Las funciones nuevas tienen documentación compatible con Doxygen.
 - [ ] El informe LaTeX fue actualizado cuando corresponde.
-- [ ] Las casillas correspondientes de `TODO.md` fueron marcadas.
+- [ ] `TODO.md` y `AGENTS.md` fueron actualizados (casillas y estado actual).
 - [ ] No se incluyeron credenciales, cachés, datos descargados ni resultados transitorios.
 - [ ] Las dependencias nuevas están registradas en `requirements.txt`.
 
