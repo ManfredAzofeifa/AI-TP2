@@ -1,0 +1,44 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+% Las subfiguras también se listan en el índice de figuras.
+\captionsetup[subfigure]{list=true}
+\usepackage[hidelinks]{hyperref}
+\usepackage[margin=1in]{geometry}
+
+\graphicspath{{../../results/figures/}}
+
+\title{Trabajo práctico 2: Detección de spam con aprendizaje supervisado y no supervisado}
+\author{Alejandro Quesada \and Jose Herrera \and Manfred Azofeifa}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+
+% Una sección por punto del enunciado: cada responsable edita solo su archivo.
+\input{sections/00-introduction}
+\input{sections/01-punto1-regresion-logistica}
+\input{sections/02-punto2-deteccion-anomalias}
+\input{sections/03-punto3-modelos-lenguaje}
+\input{sections/04-unit-tests}
+\input{sections/05-comparison}
+\input{sections/06-conclusions}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,26 @@
+PROJECT_NAME           = "TP2 - Detector de spam"
+PROJECT_BRIEF          = "Documentacion interna del notebook, sus modulos y pruebas"
+OUTPUT_DIRECTORY       = build/doxygen
+
+INPUT                  = docs/doxygen/mainpage.dox \
+                         build/doxygen-source \
+                         src/tp2 \
+                         tests
+FILE_PATTERNS          = *.py *.dox
+RECURSIVE              = YES
+EXCLUDE_PATTERNS       = */.ipynb_checkpoints/* */__pycache__/*
+
+MARKDOWN_SUPPORT       = YES
+JAVADOC_AUTOBRIEF      = YES
+PYTHON_DOCSTRING       = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+SOURCE_BROWSER         = YES
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+QUIET                  = NO

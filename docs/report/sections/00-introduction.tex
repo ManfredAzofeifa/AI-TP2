@@ -1,0 +1,39 @@
+\section{Introducción}
+
+Este informe documenta el Trabajo práctico 2 del curso de Principios de
+Inteligencia Artificial. El trabajo consiste en detectar mensajes spam del
+dataset SMSSpamCollection \cite{almeida2011sms,uci_sms_spam}, un conjunto
+público de mensajes SMS etiquetados como \emph{ham} o \emph{spam}, con tres
+enfoques implementados en PyTorch \cite{paszke2019pytorch}:
+
+\begin{enumerate}
+    \item clasificación supervisada con regresión logística sobre las
+    características de un codificador, con y sin reducción de
+    dimensionalidad por análisis de componentes principales;
+    \item detección de anomalías con densidades por histograma y un umbral
+    de verosimilitud;
+    \item clasificación con modelos grandes de lenguaje.
+\end{enumerate}
+
+La implementación se organiza en un archivo independiente por punto del
+enunciado (\texttt{punto1.py}, \texttt{punto2.py} y \texttt{punto3.py}, en
+\texttt{src/tp2/}) más un archivo de utilidades compartidas
+(\texttt{utils.py}), que el notebook principal
+\texttt{tp2\_detector\_spam.ipynb} integra. Todos los números, tablas y
+figuras de este informe provienen de una ejecución completa del notebook
+desde un kernel limpio; las figuras se exportan automáticamente durante esa
+ejecución.
+
+\subsection{Protocolo común}
+
+\begin{itemize}
+    \item \textbf{Etiquetas.} \emph{ham} $=0$ y \emph{spam} $=1$; spam es la
+    clase positiva del F1-score y la anomalía del detector.
+    \item \textbf{Métricas.} Tasa de aciertos y F1-score.
+    \item \textbf{Particiones.} 30 particiones estratificadas de 70~\% de
+    entrenamiento y 30~\% de prueba, una por semilla.
+    \item \textbf{Muestreo de los modelos de lenguaje.} 30 muestras
+    estratificadas del 30~\% del dataset.
+    \item TODO: decisiones del equipo (codificador, $D$ óptima, umbral y
+    modelos de lenguaje).
+\end{itemize}
