@@ -11,7 +11,7 @@ esperado.
 
 \subsection{Evaluación del modelo}
 
-\begin{description}
+\begin{description}[style=nextline]
     \item[\texttt{test\_forward\_zero\_parameters\_returns\_one\_half}] Evalúa
     cinco muestras aleatorias en $\mathbb{R}^3$ con $w=0$ y $b=0$. El logit
     es 0 para cualquier entrada y $\sigma(0)=0.5$, así que todas las
@@ -29,7 +29,7 @@ esperado.
 
 \subsection{Entrenamiento}
 
-\begin{description}
+\begin{description}[style=nextline]
     \item[\texttt{test\_train\_follows\_cross\_entropy\_gradient}] Sobre 200
     puntos en $\mathbb{R}^3$ con clases que se traslapan, compara el primer
     paso del entrenamiento con $w_1 = w_0 - \alpha\nabla_w L(w_0)$ y
@@ -46,4 +46,26 @@ esperado.
     el modelo clasifique correctamente todos los puntos. Entrena una segunda
     vez con la misma semilla y verifica que los pesos y el sesgo sean
     exactamente iguales, es decir, que el entrenamiento sea reproducible.
+\end{description}
+
+\subsection{Otras pruebas del punto 1}
+
+Además de las cuatro pruebas obligatorias, \texttt{tests/test\_punto1.py}
+verifica el resto del punto 1 sin descargar datos ni modelos:
+
+\begin{description}[style=nextline]
+    \item[\texttt{test\_make\_linearly\_separable\_shapes\_and\_reproducibility}]
+    El generador de 1.3 devuelve las formas y tipos del contrato, las dos
+    clases balanceadas, todos los puntos a una distancia de al menos el margen
+    de la frontera verdadera y del lado de su clase, y los mismos datos con la
+    misma semilla.
+    \item[\texttt{test\_extract\_features\_keeps\_order\_and\_contract}] Con un
+    codificador falso, \texttt{extract\_features} devuelve un tensor
+    \texttt{float32} de forma $(n, D)$ en el orden de los textos.
+    \item[\texttt{test\_grid\_search\_covers\_grid\_and\_orders\_by\_score}] La
+    calibración prueba todas las combinaciones, deja primero la de mayor
+    puntaje y resuelve los empates con la menor pérdida en validación.
+    \item[\texttt{test\_boundary\_plots\_return\_figures}, \texttt{test\_run\_plots\_return\_figures}]
+    Las siete gráficas de 1.3 y 1.4 devuelven una figura con el título pedido,
+    sin mostrarla.
 \end{description}

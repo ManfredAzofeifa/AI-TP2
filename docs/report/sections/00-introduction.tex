@@ -34,6 +34,11 @@ ejecución.
     entrenamiento y 30~\% de prueba, una por semilla.
     \item \textbf{Muestreo de los modelos de lenguaje.} 30 muestras
     estratificadas del 30~\% del dataset.
-    \item TODO: decisiones del equipo (codificador, $D$ óptima, umbral y
+    \item \textbf{Codificador.} \texttt{sentence-transformers/all-MiniLM-L6-v2},
+    con vectores de 384 dimensiones (Sección~\ref{sec:caracteristicas}).
+    \item \textbf{Hiperparámetros de la regresión logística.} Calibrados por
+    F1 en una validación tomada solo del entrenamiento
+    (Sección~\ref{sec:calibracion}).
+    \item TODO: decisiones pendientes del equipo ($D$ óptima, umbral y
     modelos de lenguaje).
 \end{itemize}

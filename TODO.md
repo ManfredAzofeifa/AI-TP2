@@ -4,7 +4,7 @@ Guía de trabajo para las personas del equipo: qué falta, qué reglas seguir y
 qué se entrega. Marcar las casillas a medida que se completan, en el mismo
 pull request que hace el cambio. Los agentes de IA siguen
 [AGENTS.md](AGENTS.md); si cambia el estado, una tarea o una regla, actualizar
-también ese archivo.
+también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
 - **Entrega:** martes 20 de octubre de 2026, por TEC Digital.
 - **Modo de trabajo:** grupos de 3 personas.
@@ -15,11 +15,17 @@ también ese archivo.
 
 ## Estado actual
 
-- **Listo:** infraestructura compartida (`src/tp2/utils.py`), punto 1.1
-  (`forward`) y punto 1.2 (`train_logistic_regression`), con sus dos pruebas
-  unitarias cada uno.
-- **Pendiente:** 1.3 a 1.5, punto 2 y punto 3.
-- **Pruebas:** `pytest` da 18 superadas, 4 pendientes y 0 fallidas.
+- **Listo:** infraestructura compartida (`src/tp2/utils.py`) y puntos 1.1 a
+  1.4 del punto 1, con sus pruebas, figuras, análisis en el notebook y
+  secciones del informe.
+- **Resultado de 1.4:** regresión logística sobre los embeddings de
+  `all-MiniLM-L6-v2`, tasa 10 y 2000 épocas: tasa de aciertos 0.988 ± 0.002 y
+  F1-score 0.953 ± 0.008 en 30 corridas.
+- **Pendiente:** 1.5, punto 2 y punto 3.
+- **Pruebas:** `pytest` da 23 superadas, 3 pendientes y 0 fallidas.
+- **Revisión interna:** `docs/report/review.tex` y su PDF compilado,
+  `docs/report/review.pdf`, explican la lógica, los pasos, los resultados y
+  las decisiones de todo lo realizado.
 
 ## Cómo trabajar
 
@@ -41,7 +47,10 @@ también ese archivo.
 4. Ejecutar la celda de configuración y la sección del punto en el notebook.
 5. Escribir la descripción y el análisis en el notebook y en la sección del
    informe.
-6. Marcar la casilla y actualizar el [estado actual](#estado-actual) en este
+6. Registrar en `docs/report/review.tex` la lógica, los pasos, los resultados
+   y las decisiones del apartado, y recompilar el PDF con
+   `./build_pdf.sh review` (el `.tex` y `review.pdf` se versionan juntos).
+7. Marcar la casilla y actualizar el [estado actual](#estado-actual) en este
    archivo y en `AGENTS.md`, y abrir el pull request.
 
 ## Reglas del proyecto
@@ -61,7 +70,14 @@ también ese archivo.
 - Los archivos no leen variables globales del notebook: todo valor
   compartido llega como argumento.
 - Las funciones de graficación devuelven la figura sin mostrarla y con un
-  título descriptivo; el notebook la muestra con `utils.show_figure`.
+  título descriptivo; el notebook la muestra con `utils.show_figure`, que
+  nombra el PNG con el título de la figura (`figure.suptitle`) o con el título
+  centrado del eje. Un título solo alineado a la izquierda produce
+  `figura.png`.
+- Las gráficas del punto 1 siguen un estilo común que conviene reutilizar:
+  azul para ham o clase 0 y naranja para spam o clase 1 (se distinguen con
+  daltonismo), un marcador distinto por clase, ejes discretos y un subtítulo
+  que explica cómo leer la figura.
 - Las celdas del notebook se mantienen delgadas: llamadas a los archivos de
   cada punto y presentación de resultados.
 
@@ -88,6 +104,8 @@ archivo, sus pruebas y las celdas del notebook que lo usan.
 - Puntos 1.4, 1.5 y 2.2: 30 corridas, cada una con una partición
   estratificada 70 % / 30 %. La corrida `k` usa la semilla `SEED + k - 1`
   que entrega el notebook; no usar semillas propias dentro de los archivos.
+- Los hiperparámetros se eligen con una validación sacada solo del
+  entrenamiento, nunca con la prueba (así se calibró 1.4).
 - Punto 1.5: reducir a 50 %, 25 % y 2 dimensiones. El PCA de cada corrida se
   ajusta solo con el entrenamiento y se aplica a la prueba.
 - Punto 2.1: usar la $D$ óptima deducida en 1.5 (`OPTIMAL_PCA_DIMENSIONS`).
@@ -114,10 +132,11 @@ sección "Objetivo y protocolo" del notebook y en el informe.
 
 - [ ] Confirmar los integrantes; se copiaron del TP1 (`README.md`,
       notebook y `docs/report/main.tex`).
-- [ ] `ENCODER_NAME` (1.4): codificador de los mensajes; registrar la
-      dependencia y su versión en `requirements.txt`.
-- [ ] `LR_LEARNING_RATE` y `LR_EPOCHS` (1.2): hoy valen 0.1 y 1000; calibrar
-      con las características reales y reportarlos en el informe.
+- [x] `ENCODER_NAME` (1.4): `sentence-transformers/all-MiniLM-L6-v2`
+      (19/10/2026), con `sentence-transformers==6.1.0` en `requirements.txt`.
+- [x] `LR_LEARNING_RATE` y `LR_EPOCHS` (1.4): calibrados por F1 en una
+      validación del entrenamiento, con empates resueltos por la pérdida en
+      validación: tasa 10 y 2000 épocas.
 - [ ] `OPTIMAL_PCA_DIMENSIONS` (fin de 1.5, se usa en 2.1).
 - [ ] Datos con los que se construyen las densidades (2.1): solo ham del
       entrenamiento (lo que hace hoy el notebook) o todo el entrenamiento.
@@ -141,21 +160,29 @@ Es la ruta crítica: el punto 2 necesita sus características (1.4) y su PCA
       inicialización con `seed` e historial de pérdida (épocas + 1 valores).
   - [x] 1.2a: `test_train_follows_cross_entropy_gradient` y
         `test_train_separates_linearly_separable_data`.
-- [ ] **1.3 (10)** `make_linearly_separable`, `plot_dataset`,
-      `plot_decision_boundary` y `plot_loss_history`. Gráficos y tablas que
-      ilustren el proceso; análisis.
-  - [ ] Recomendada: `test_make_linearly_separable_shapes_and_reproducibility`.
-- [ ] **1.4 (10)** `load_encoder` y `extract_features`; fijar
-      `ENCODER_NAME`. 30 corridas 70/30; reportar y comentar tasa de aciertos
-      y F1-score.
+- [x] **1.3 (10)** `make_linearly_separable` (frontera verdadera fija
+      0.6 x1 + 0.8 x2 - 0.5 = 0, margen 1), `describe_boundary`,
+      `plot_dataset`, `plot_loss_history`, `plot_boundary_evolution` y
+      `plot_decision_boundary`. Cuatro figuras, dos tablas y análisis.
+  - [x] `test_make_linearly_separable_shapes_and_reproducibility` y
+        `test_boundary_plots_return_figures`.
+- [x] **1.4 (10)** `load_encoder`, `extract_features`,
+      `grid_search_logistic_regression`, `plot_calibration`,
+      `plot_run_metrics` y `plot_confusion_matrix`. Calibración, 30 corridas
+      70/30, tres figuras, tablas y análisis.
+  - [x] `test_extract_features_keeps_order_and_contract`,
+        `test_grid_search_covers_grid_and_orders_by_score` y
+        `test_run_plots_return_figures`.
 - [ ] **1.5 (20)** `fit_pca`, `transform_pca`, `plot_explained_variance` y
       `plot_pca_projection`. Reducir a 50 %, 25 % y 2 dimensiones, graficar
       todo el dataset, analizar la clasificación y deducir la $D$ óptima
       (`OPTIMAL_PCA_DIMENSIONS`).
   - [ ] Recomendada: `test_fit_pca_recovers_dominant_direction`.
-- [ ] Informe: `01-punto1-regresion-logistica.tex` (1.1, 1.2 y
-      `04-unit-tests.tex` ya escritos; faltan 1.3 a 1.5 y los
-      hiperparámetros calibrados).
+- [ ] Informe: `01-punto1-regresion-logistica.tex` (1.1 a 1.4 y
+      `04-unit-tests.tex` ya escritos; falta 1.5).
+- Nota para 1.5: `logistic_regression_run` ya acepta `n_components` y guarda
+  la matriz de confusión de cada corrida; las tablas comparativas usan
+  `only_metrics(...)` para mostrar solo `tasa_aciertos` y `f1`.
 
 ## Punto 2 - `src/tp2/punto2.py` (30 puntos)
 
@@ -210,10 +237,14 @@ el mismo que clasificar cada muestra, con 30 veces menos inferencias.
 Lo siguiente no se pudo comprobar todavía y debe revisarse en la primera
 ejecución:
 
-- [ ] Descarga y lectura del dataset real. La URL de UCI responde y la
-      lectura se probó con un archivo de ejemplo; según UCI, la tabla
-      "Distribución de clases del dataset" debería sumar 5 574 mensajes.
-- [ ] Compilación del informe con `./build_pdf.sh` (no había LaTeX instalado).
+- [x] Descarga y lectura del dataset real: 5 574 mensajes, 4 827 ham
+      (86.6 %) y 747 spam (13.4 %), como indica UCI.
+- [x] LaTeX instalado (MiKTeX, con `latexmk`) y `review.tex` compilado en
+      `docs/report/review.pdf`.
+- [x] El informe completo (`main.tex`) compila: 12 páginas, sin citas sin
+      resolver ni líneas fuera del margen (19/10/2026).
+- [ ] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
+      entrega, con todos los puntos terminados.
 - [ ] Generación de Doxygen (no estaba instalado).
 
 ## Checklist de entrega

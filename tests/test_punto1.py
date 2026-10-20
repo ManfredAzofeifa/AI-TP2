@@ -9,6 +9,8 @@ para `train_logistic_regression`). Las pruebas que todavía lanzan
 
 import math
 
+import matplotlib.pyplot as plt
+import pandas as pd
 import torch
 import torch.nn.functional as F
 
@@ -131,16 +133,155 @@ def test_train_separates_linearly_separable_data():
 
 
 # ---------------------------------------------------------------------------
-# 1.3 y 1.5: pruebas recomendadas
+# 1.3: datos sintéticos linealmente separables
 # ---------------------------------------------------------------------------
 
 
 def test_make_linearly_separable_shapes_and_reproducibility():
     """!
-    @brief (Recomendada, 1.3) Verificar formas, tipos, ambas clases y reproducibilidad con semilla.
+    @brief (1.3) Verifica formas, tipos, balance de clases, margen y reproducibilidad.
+
+    La distancia con signo w* · x + b* a la frontera verdadera debe ser al menos
+    `margin` en valor absoluto y tener el signo de la clase (positiva para la
+    clase 1), lo que garantiza que los datos son linealmente separables.
+
     @return None.
     """
-    raise NotImplementedError("Punto 1.3: diseñar la prueba del generador sintético.")
+    X, y = punto1.make_linearly_separable(n_samples=101, margin=0.75, noise=0.5, seed=4)
+    X_again, y_again = punto1.make_linearly_separable(n_samples=101, margin=0.75, noise=0.5, seed=4)
+    X_other, _ = punto1.make_linearly_separable(n_samples=101, margin=0.75, noise=0.5, seed=5)
+
+    assert X.shape == (101, 2) and X.dtype == torch.float32
+    assert y.shape == (101,) and y.dtype == torch.int64
+    assert sorted(torch.bincount(y).tolist()) == [50, 51]
+
+    distance = X @ torch.tensor(punto1.SYNTHETIC_TRUE_WEIGHTS) + punto1.SYNTHETIC_TRUE_BIAS
+    assert (distance.abs() >= 0.75 - 1e-5).all()
+    assert torch.equal(distance > 0, y == 1)
+
+    assert torch.equal(X, X_again) and torch.equal(y, y_again)
+    assert not torch.equal(X, X_other)
+
+
+def test_boundary_plots_return_figures():
+    """!
+    @brief (1.3) Las cuatro gráficas devuelven una figura con el título pedido, sin mostrarla.
+    @return None.
+    """
+    X, y = punto1.make_linearly_separable(n_samples=40, seed=0)
+    model = punto1.train_logistic_regression(X, y, learning_rate=0.1, epochs=20, seed=0)
+    true_boundary = (torch.tensor(punto1.SYNTHETIC_TRUE_WEIGHTS), punto1.SYNTHETIC_TRUE_BIAS)
+
+    figures = [
+        punto1.plot_dataset(X, y, title="A", true_boundary=true_boundary),
+        punto1.plot_decision_boundary(
+            X, y, lambda grid: punto1.predict_proba(model, grid), title="B", grid_points=30,
+            true_boundary=true_boundary,
+        ),
+        punto1.plot_boundary_evolution(X, y, {0: model, 20: model}, title="C"),
+        punto1.plot_loss_history(model, title="D"),
+    ]
+    try:
+        assert [figure.get_suptitle() for figure in figures] == ["A", "B", "C", "D"]
+    finally:
+        for figure in figures:
+            plt.close(figure)
+
+
+# ---------------------------------------------------------------------------
+# 1.4: extracción de características y calibración
+# ---------------------------------------------------------------------------
+
+
+class _FakeEncoder:
+    """!
+    @brief Codificador de prueba: devuelve (longitud del texto, 1) sin descargar ningún modelo.
+    """
+
+    def __init__(self):
+        """!
+        @brief Inicializa el registro de llamadas.
+        @return None.
+        """
+        self.calls = []
+
+    def encode(self, texts, batch_size, convert_to_tensor, show_progress_bar):
+        """!
+        @brief Imita `SentenceTransformer.encode` con vectores deterministas en float64.
+        @param texts Lista de textos.
+        @param batch_size Tamaño de lote solicitado.
+        @param convert_to_tensor Si se pidió un tensor.
+        @param show_progress_bar Si se pidió barra de progreso.
+        @return Tensor de forma (n, 2).
+        """
+        self.calls.append((list(texts), batch_size, convert_to_tensor, show_progress_bar))
+        return torch.tensor([[float(len(text)), 1.0] for text in texts], dtype=torch.float64)
+
+
+def test_extract_features_keeps_order_and_contract():
+    """!
+    @brief (1.4) Las características salen en float32, forma (n, D) y en el orden de los textos.
+    @return None.
+    """
+    encoder = _FakeEncoder()
+    features = punto1.extract_features(("hola", "ok", "mensaje largo"), encoder, batch_size=2)
+
+    assert features.dtype == torch.float32
+    torch.testing.assert_close(features, torch.tensor([[4.0, 1.0], [2.0, 1.0], [13.0, 1.0]]))
+    assert encoder.calls == [(["hola", "ok", "mensaje largo"], 2, True, False)]
+
+
+def test_grid_search_covers_grid_and_orders_by_score():
+    """!
+    @brief (1.4) La búsqueda prueba todas las combinaciones y deja primero la de mayor puntaje.
+
+    A igual puntaje, debe quedar primero la de menor entropía cruzada en la validación.
+
+    @return None.
+    """
+    X, y = _noisy_dataset()
+    accuracy = lambda y_true, y_pred: float((y_true == y_pred).to(torch.float32).mean())
+    grid = punto1.grid_search_logistic_regression(
+        X[:150], y[:150], X[150:], y[150:], [0.01, 0.5], [1, 50], accuracy, seed=0
+    )
+
+    assert len(grid) == 4
+    assert set(zip(grid["learning_rate"], grid["epochs"])) == {(0.01, 1), (0.01, 50), (0.5, 1), (0.5, 50)}
+    assert grid["score"].is_monotonic_decreasing
+    assert grid.iloc[0]["score"] > 0.8
+    for _, ties in grid.groupby("score"):
+        assert ties["validation_loss"].is_monotonic_increasing
+
+
+def test_run_plots_return_figures():
+    """!
+    @brief (1.4) Las gráficas de calibración, métricas y matriz de confusión devuelven figuras.
+    @return None.
+    """
+    grid = pd.DataFrame(
+        {"learning_rate": [1.0, 1.0, 2.0, 2.0], "epochs": [10, 20, 10, 20],
+         "score": [0.8, 0.9, 0.7, 0.85], "validation_loss": [0.5, 0.4, 0.6, 0.45],
+         "train_loss": [0.4, 0.3, 0.5, 0.35]}
+    ).sort_values("score", ascending=False)
+    runs = pd.DataFrame(
+        {"tasa_aciertos": [0.97, 0.98], "f1": [0.90, 0.92], "tn": [480, 482], "fp": [3, 1],
+         "fn": [12, 10], "tp": [60, 62]}
+    )
+    figures = [
+        punto1.plot_calibration(grid, title="E"),
+        punto1.plot_run_metrics(runs, title="F"),
+        punto1.plot_confusion_matrix(runs, title="G"),
+    ]
+    try:
+        assert [figure.get_suptitle() for figure in figures] == ["E", "F", "G"]
+    finally:
+        for figure in figures:
+            plt.close(figure)
+
+
+# ---------------------------------------------------------------------------
+# 1.5: PCA
+# ---------------------------------------------------------------------------
 
 
 def test_components_for_fraction():

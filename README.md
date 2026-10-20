@@ -42,7 +42,7 @@ AI-TP2/
 ├── docs/
 │   ├── assignment/             enunciado original
 │   ├── doxygen/                portada de Doxygen
-│   └── report/                 informe LaTeX, una sección por punto
+│   └── report/                 informe LaTeX (main.tex) y revisión interna (review.tex y review.pdf)
 ├── notebooks/
 │   └── tp2_detector_spam.ipynb notebook principal (main)
 ├── results/
@@ -61,7 +61,7 @@ AI-TP2/
 
 | Punto | Archivo | Pruebas | Sección del informe | Estado |
 |---|---|---|---|---|
-| 1. Regresión logística (60) | `src/tp2/punto1.py` | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1 y 1.2 listos |
+| 1. Regresión logística (60) | `src/tp2/punto1.py` | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1 a 1.4 listos |
 | 2. Detección de anomalías (30) | `src/tp2/punto2.py` | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | pendiente |
 | 3. Modelos de lenguaje (10 + 20 extra) | `src/tp2/punto3.py` | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
 | Infraestructura compartida | `src/tp2/utils.py` | `tests/test_utils.py` | — | listo |
@@ -132,9 +132,11 @@ py -c "import torch, pandas, matplotlib, pytest; print('ok')"
 `requirements.txt` fija pandas 3.0.3 porque, con el Control inteligente de
 aplicaciones de Windows 11, pandas 3.0.6 queda bloqueado al importarse.
 
-En ambos casos, el último comando debe imprimir `ok`. Las dependencias de los
-puntos 1.4 y 3 (`transformers`, `peft`, ...) están comentadas en
-`requirements.txt` hasta que el equipo elija los modelos.
+En ambos casos, el último comando debe imprimir `ok`. `requirements.txt`
+incluye `sentence-transformers`, que usa el codificador del punto 1.4; la
+primera ejecución descarga el modelo `all-MiniLM-L6-v2` (unos 90 MB) a la
+caché de Hugging Face. Las dependencias del punto 3 (`peft`, ...) están
+comentadas hasta que el equipo elija los modelos.
 
 ## Ejecución
 
@@ -186,7 +188,9 @@ como la documentación generada se excluyen de Git.
 
 ## Informe externo
 
-Con una distribución de LaTeX y `latexmk` instalados, ejecutar desde la raíz:
+Con una distribución de LaTeX y `latexmk` instalados (en Windows, MiKTeX:
+`winget install MiKTeX.MiKTeX`, con la instalación automática de paquetes
+activada), ejecutar desde la raíz:
 
 ```bash
 ./build_pdf.sh
@@ -195,6 +199,21 @@ Con una distribución de LaTeX y `latexmk` instalados, ejecutar desde la raíz:
 El script descarta los archivos intermedios y deja únicamente el PDF generado
 en `submission/tp2_detector_spam.pdf`. (En el TP1 el script creaba
 `submissions/` pero copiaba a `submission/`; aquí ambas rutas coinciden).
+
+## Revisión interna del proyecto
+
+`docs/report/review.tex` es un documento aparte, que no se entrega, para
+entender todo lo realizado: la lógica de cada apartado, los pasos seguidos,
+los resultados y el registro de decisiones. Se actualiza con cada avance y
+se versiona junto con su PDF compilado, `docs/report/review.pdf`. Para
+recompilarlo (sin dejar archivos intermedios en `docs/report/`):
+
+```bash
+./build_pdf.sh review
+```
+
+Las figuras que usa salen de `results/figures/`, así que antes hay que
+ejecutar las secciones correspondientes del notebook.
 
 ## Estado de verificación
 
