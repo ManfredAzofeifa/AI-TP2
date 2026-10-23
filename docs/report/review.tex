@@ -15,6 +15,7 @@
 \usepackage{amssymb}
 \usepackage{array}
 \usepackage{booktabs}
+\usepackage{longtable}
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{caption}
@@ -91,6 +92,8 @@ prueba de independencia. \\
 docs/report/ & Informe (\texttt{main.tex}, una sección por punto) y este
 documento. \\
 results/ & Figuras (PNG) y tablas (CSV) que exporta el notebook. \\
+data/raw/ & El dataset de UCI (\texttt{SMSSpamCollection}), versionado para
+que todo el equipo use el mismo archivo. \\
 TODO.md, AGENTS.md & Guía de trabajo para personas y para agentes de IA. \\
 docs/report/review.tex, review.pdf & Este documento y su PDF compilado. \\
 \bottomrule
@@ -286,21 +289,29 @@ calculan una vez y se guardan en \texttt{data/processed/}, porque no dependen
 de la partición.
 
 \paragraph{Calibración.} Con vectores de norma 1 cada coordenada vale del
-orden de 0.05, así que el gradiente es pequeño y la tasa 0.1 de 1.3 aprende
-muy despacio. El equipo decidió calibrar la tasa de aprendizaje y las épocas
+orden de 0.05, así que el gradiente es pequeño y no hay una tasa de
+aprendizaje evidente. El equipo decidió calibrar la tasa de aprendizaje y las épocas
 con una validación: del 70~\% de entrenamiento de la primera partición se
 separa un 20~\% estratificado, se entrena cada combinación de la cuadrícula
-(tasas 0.5 a 50, de 250 a 4000 épocas) con el 80~\% restante y se elige la
+(tasas 0.1 a 50, de 250 a 4000 épocas) con el 80~\% restante y se elige la
 de mayor $F_1$ en la validación. El $F_1$ de una validación con 105 spam cambia
 a saltos y muchas combinaciones empatan, así que el empate se resuelve con la
 menor entropía cruzada en la validación. Resultado: tasa 10 y 2000 épocas
 ($F_1 = 0.961$). Se observa que lo que cuenta es el producto
 tasa~$\times$~épocas ($10\times2000$, $5\times4000$ y $20\times1000$ dan lo
-mismo), que con poco entrenamiento el $F_1$ cae hasta 0.42 y que con
-demasiado (tasa 50 y 4000 épocas) la pérdida de validación sube y el $F_1$
-baja a 0.951: un sobreajuste leve. Con la tasa 0.1 sin calibrar, una
-ejecución preliminar dio un $F_1$ medio de solo 0.23
+mismo), que con poco entrenamiento el modelo casi no aprende (con tasa 0.1 y
+250 o 500 épocas responde siempre ham y el $F_1$ es 0; con 1000 épocas,
+0.174) y que con demasiado (tasa 50 y 4000 épocas) la pérdida de validación
+sube y el $F_1$ baja a 0.951: un sobreajuste leve
 (Figura~\ref{fig:review-calibracion}).
+
+\paragraph{Independencia de 1.3.} El apartado 1.4 no usa nada de 1.3: ni sus
+datos, ni su modelo, ni sus hiperparámetros, y su análisis no se apoya en
+él. Las celdas de 1.4 y 1.5 se pueden ejecutar saltándose las de 1.3. Antes
+la calibración se justificaba con ``la tasa 0.1 de 1.3 aprende muy despacio''
+y con un $F_1$ de 0.23 de una ejecución preliminar que el notebook no
+reproducía; ahora la tasa 0.1 forma parte de la cuadrícula y ese
+comportamiento sale de la propia calibración.
 
 \begin{figure}[H]
     \centering
@@ -330,12 +341,76 @@ tendría 0.866 de aciertos y $F_1=0$.
 en otras corridas pueden caer en la prueba. Solo se eligieron dos números con
 ellos, así que el sesgo optimista es pequeño, pero existe.
 
-\subsection{1.5 PCA (pendiente)}
+\subsection{1.5 PCA}
 
-Diseño previsto: en cada corrida el PCA se ajusta solo con el entrenamiento
-(para no filtrar información de la prueba) y se reduce a 50~\% ($k=192$),
-25~\% ($k=96$) y 2 dimensiones. La dimensión con mejor resultado será la $D$
-óptima que usa el punto 2.
+\paragraph{Lógica.} \texttt{fit\_pca} centra los datos y toma las
+componentes de la SVD de la matriz centrada (\texttt{torch.linalg.svd}): las
+filas de $V^\top$ son las direcciones de máxima varianza y la varianza de la
+componente $j$ es $\sigma_j^2/(n-1)$. Se calcula en doble precisión y el
+signo de cada componente se fija (coordenada de mayor valor absoluto
+positiva), porque la SVD lo deja arbitrario y las figuras cambiarían entre
+máquinas. \texttt{transform\_pca} resta la media del ajuste, no la de los
+datos que recibe, así la prueba se proyecta con lo aprendido del
+entrenamiento.
+
+\paragraph{Figuras.} Con 2 dimensiones se grafican todos los mensajes. Con 96
+y 192 no se pueden dibujar todas las dimensiones como puntos, y las dos
+primeras componentes son las mismas en los tres casos (las componentes de un
+PCA están anidadas), así que repetir el mismo plano no diría nada nuevo. Se
+eligió una figura de dos paneles: los mensajes sobre las dos primeras
+componentes y, para cada una de las $k$ componentes, la separación entre
+clases $|d|$ de Cohen (diferencia de medias entre desviación estándar
+combinada). Así la figura de cada caso muestra todas sus dimensiones.
+
+\paragraph{Calibración por dimensión.} Con la tasa 10 y 2000 épocas de 1.4,
+una revisión en la validación (no en la prueba) mostró que con 96
+componentes el modelo seguía mejorando al entrenar más ($F_1$ en validación
+de 0.947 con 2000 épocas y 0.952 con 8000). Para que la comparación sea
+justa, cada $k$ se calibra con la misma cuadrícula y la misma validación de
+1.4, ajustando el PCA solo con la parte de ajuste: 192 componentes, tasa 50
+y 250 épocas; 96, tasa 50 y 500 épocas; 2, tasa 2 y 500 épocas. La tasa 50
+está en el borde de la cuadrícula. Con los valores de 1.4 los resultados de
+prueba eran casi los mismos ($F_1$ de 0.949, 0.934 y 0.755 en una ejecución
+del 23/10/2026), así que la calibración no cambia las conclusiones.
+
+\paragraph{Resultados.} La varianza está muy repartida: la primera
+componente explica el 4.5~\%; 2, 96 y 192 componentes conservan el 7.5~\%,
+67.6~\% y 87.8~\%. La primera componente es la que más separa las clases
+($|d|=2.68$; el 82~\% del spam y el 6~\% del ham tienen una coordenada mayor
+que 0.2); le siguen la 4 (0.67) y la 9 (0.57), y solo 7 componentes superan
+0.3, todas entre las 20 primeras.
+
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Dimensiones & Tasa de aciertos & $F_1$ & $\Delta F_1$ en la misma partición & Corridas con $F_1$ menor \\
+\midrule
+384 (sin PCA) & $0.988\pm0.002$ & $0.953\pm0.008$ & --- & --- \\
+192 & $0.986\pm0.002$ & $0.945\pm0.010$ & $-0.008\pm0.006$ & 27 de 30 \\
+96  & $0.983\pm0.003$ & $0.934\pm0.010$ & $-0.019\pm0.008$ & 30 de 30 \\
+2   & $0.940\pm0.004$ & $0.750\pm0.020$ & $-0.203\pm0.019$ & 30 de 30 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Ninguna reducción es gratis. Con 192 la pérdida es menor que la variación
+del $F_1$ entre particiones y casi todo es spam que se escapa (17.5 por
+corrida frente a 14.6); con 96 también suben las falsas alarmas (10.8 frente
+a 6.2); con 2 se escapa un tercio del spam (74.7 de 224).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{proyeccion-pca-del-dataset-50-de-d}
+    \caption{Mensajes sobre las dos primeras componentes y separación entre
+    clases en cada una de las 192 componentes.}
+    \label{fig:review-pca}
+\end{figure}
+
+\paragraph{Pendiente: $D$ óptima.} Es decisión del equipo y la usa el punto
+2. Opciones: 192 (la que menos pierde), 96 (pierde un poco más, pero la mitad
+de histogramas en el punto 2) o explorar valores intermedios o menores. 2
+queda descartada.
 
 %-------------------------------------------------------------------------------
 \section{Punto 2: detección de anomalías (pendiente)}
@@ -363,12 +438,16 @@ tratamiento de respuestas ambiguas.
 \section{Registro de decisiones}
 %-------------------------------------------------------------------------------
 
-\begin{center}
-\small
-\begin{tabular}{p{0.13\textwidth} p{0.32\textwidth} p{0.45\textwidth}}
+{\small
+\begin{longtable}{p{0.13\textwidth} p{0.32\textwidth} p{0.45\textwidth}}
 \toprule
 \textbf{Fecha} & \textbf{Decisión} & \textbf{Motivo} \\
 \midrule
+\endfirsthead
+\toprule
+\textbf{Fecha} & \textbf{Decisión} & \textbf{Motivo} \\
+\midrule
+\endhead
 17/10/2026 & Implementación en archivos \texttt{.py} y notebook como
 \emph{main}. & Git fusiona \texttt{.py} sin problemas; varias personas
 trabajan en paralelo. \\
@@ -385,7 +464,35 @@ aprendida con la verdadera. \\
 19/10/2026 & Codificador \texttt{all-MiniLM-L6-v2} (1.4). & Decisión del
 equipo: buena representación de oraciones y rápido en CPU. \\
 19/10/2026 & Calibración por $F_1$ en una validación del entrenamiento
-(1.4). & Decisión del equipo: la tasa 0.1 no sirve con vectores de norma 1. \\
+(1.4). & Decisión del equipo: con vectores de norma 1 no hay una tasa de
+aprendizaje evidente. \\
+23/10/2026 & El apartado 1.3 queda independiente: 1.4 y 1.5 solo usan el
+dataset de UCI, y la tasa 0.1 entra en la cuadrícula de calibración de 1.4.
+& Pedido del equipo. El análisis de 1.4 citaba la tasa de 1.3 y un $F_1$ de
+una ejecución preliminar que el notebook no reproducía. \\
+23/10/2026 & El dataset de UCI se versiona en
+\texttt{data/raw/SMSSpamCollection}. & Pedido del equipo: que todos tengan el
+mismo archivo sin depender de la descarga. Licencia CC BY 4.0, con la cita en
+\texttt{data/README.md}. \\
+23/10/2026 & Ningún asistente de IA figura como autor, coautor ni ayudante
+en el repositorio (commits, pull requests, código, notebook ni informe). &
+Pedido del equipo: los autores son las personas del equipo. \\
+23/10/2026 & \texttt{build\_pdf.sh} con permiso de ejecución en Git. & En
+Linux y macOS \texttt{./build\_pdf.sh} daba ``Permission denied''. \\
+23/10/2026 & PCA con la SVD de los datos centrados, en doble precisión y con
+el signo de cada componente fijo (1.5). & Implementación propia y
+transparente; el signo fijo hace las figuras iguales en cualquier máquina. \\
+23/10/2026 & Con 96 y 192 componentes, la figura muestra el plano de las dos
+primeras y la separación entre clases de cada componente (1.5). & El plano
+de las dos primeras es igual en los tres casos; el segundo panel muestra
+todas las dimensiones de cada caso. \\
+23/10/2026 & Tasa y épocas calibradas para cada cantidad de componentes con
+la validación de 1.4 (1.5). & Con 96 componentes, la tasa y las épocas de 1.4
+se quedaban cortas en la validación; así cada $k$ se compara en igualdad de
+condiciones. \\
+23/10/2026 & Comparación de cada reducción con la regresión sin PCA en la
+misma partición (1.5). & Todas usan las mismas 30 particiones; la diferencia
+pareada muestra que incluso con 192 el $F_1$ baja en 27 de 30 corridas. \\
 19/10/2026 & Empates de la calibración resueltos con la entropía cruzada en
 validación (1.4). & Con 105 spam el $F_1$ empata en muchas combinaciones; el
 primer criterio (menos épocas) elegía el borde de la cuadrícula (tasa 50). \\
@@ -405,24 +512,29 @@ otro \texttt{references.bib} de sus paquetes: ninguna cita se resolvía. \\
 de los guiones bajos. & Fuentes vectoriales y ningún nombre de función fuera
 del margen. \\
 \bottomrule
-\end{tabular}
-\end{center}
+\end{longtable}
+}
 
 %-------------------------------------------------------------------------------
 \section{Verificación y cómo reproducir}
 %-------------------------------------------------------------------------------
 
 \begin{itemize}
-    \item \texttt{pytest}: 23 pruebas superadas, 3 pendientes (1.5, 2.1 y 3.1)
+    \item \texttt{pytest}: 26 pruebas superadas, 2 pendientes (2.1 y 3.1)
 y 0 fallidas. Además de las cuatro obligatorias de 1.1 y 1.2, hay pruebas del
 generador sintético (formas, balance, margen y reproducibilidad), de las
 gráficas, de \texttt{extract\_features} con un codificador falso (sin
-descargar modelos) y de la búsqueda de hiperparámetros.
+descargar modelos), de la búsqueda de hiperparámetros y del PCA (dirección
+dominante, proyección centrada y sin correlación con la varianza explicada
+en la diagonal, y gráficas).
     \item Las secciones 1.3 y 1.4 del notebook se ejecutaron de principio a
-    fin en Windows con Python 3.14, PyTorch 2.14 y sentence-transformers
-    6.1.0; las figuras y tablas de este documento salen de esa ejecución.
+    fin en Windows y de nuevo el 23/10/2026 en Linux, junto con la 1.5, con Python 3.14,
+    PyTorch 2.14 y sentence-transformers 6.1.0; las figuras y tablas de este
+    documento salen de la ejecución en Linux. Ambas dan las mismas métricas
+    (las tablas solo difieren en el octavo decimal).
     \item Este documento se compiló con MiKTeX y \texttt{latexmk}
-    (\texttt{./build\_pdf.sh review}). El informe completo
+    (\texttt{./build\_pdf.sh review}) y, el 23/10/2026, con TeX Live en Linux
+    (\texttt{sh build\_pdf.sh review}). El informe completo
     (\texttt{main.tex}) también compila: 12 páginas, sin citas sin resolver ni
     líneas fuera del margen. Todavía no se ha generado la documentación
     Doxygen, que no está instalada.
@@ -430,8 +542,8 @@ descargar modelos) y de la búsqueda de hiperparámetros.
 
 Para reproducir: instalar \texttt{requirements.txt}, abrir
 \texttt{notebooks/tp2\_detector\_spam.ipynb} y ejecutar las celdas en orden.
-La primera ejecución descarga el dataset y el codificador; las siguientes
-usan las copias guardadas en \texttt{data/}. Ejecutar la celda de
+El dataset ya está en \texttt{data/raw/}; la primera ejecución descarga el
+codificador y guarda las características en \texttt{data/processed/}. Ejecutar la celda de
 configuración borra las figuras y tablas de \texttt{results/}, así que este
 documento se debe recompilar después de ejecutar las secciones que generan
 las figuras que muestra.

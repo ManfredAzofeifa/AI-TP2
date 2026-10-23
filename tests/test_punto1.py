@@ -300,4 +300,63 @@ def test_fit_pca_recovers_dominant_direction():
            componente debe ser esa dirección y explicar casi toda la varianza.
     @return None.
     """
-    raise NotImplementedError("Punto 1.5: diseñar la prueba de fit_pca.")
+    generator = torch.Generator().manual_seed(0)
+    direction = torch.tensor([0.6, 0.8, 0.0])
+    t = 5.0 * torch.randn(500, 1, generator=generator)
+    X = t * direction + 0.05 * torch.randn(500, 3, generator=generator) + torch.tensor([1.0, -2.0, 3.0])
+
+    model = punto1.fit_pca(X, n_components=2)
+
+    assert model.mean.shape == (3,)
+    assert model.components.shape == (3, 2)
+    assert model.explained_variance.shape == (2,)
+    assert torch.allclose(model.mean, X.mean(dim=0), atol=1e-5)
+    # La primera componente es la recta (el signo es arbitrario) y explica casi toda la varianza.
+    assert torch.abs(model.components[:, 0] @ direction) > 0.999
+    assert model.explained_variance_ratio[0] > 0.99
+    # Componentes ortonormales y varianzas de mayor a menor.
+    assert torch.allclose(model.components.T @ model.components, torch.eye(2), atol=1e-5)
+    assert model.explained_variance[0] >= model.explained_variance[1]
+
+
+def test_transform_pca_matches_explained_variance():
+    """!
+    @brief (1.5) Los datos de ajuste proyectados quedan centrados, sin correlación y con la
+           varianza explicada de cada componente; la misma entrada da el mismo resultado.
+    @return None.
+    """
+    X, _ = _noisy_dataset()
+    X = X @ torch.tensor([[2.0, 0.3, 0.0], [0.0, 1.0, 0.4], [0.0, 0.0, 0.5]])
+    model = punto1.fit_pca(X, n_components=3)
+    projected = punto1.transform_pca(model, X)
+
+    assert projected.shape == (200, 3) and projected.dtype == torch.float32
+    assert torch.allclose(projected.mean(dim=0), torch.zeros(3), atol=1e-5)
+    covariance = torch.cov(projected.T)
+    assert torch.allclose(covariance, torch.diag(model.explained_variance), atol=1e-4)
+    assert torch.isclose(model.explained_variance_ratio.sum(), torch.tensor(1.0), atol=1e-5)
+    # La prueba se proyecta con la media del ajuste, no con la suya.
+    assert torch.allclose(punto1.transform_pca(model, model.mean[None, :]), torch.zeros(1, 3), atol=1e-6)
+    refit = punto1.fit_pca(X, n_components=3)
+    assert torch.equal(refit.components, model.components)
+
+
+def test_pca_plots_return_figures():
+    """!
+    @brief (1.5) Las gráficas de varianza explicada y de proyección devuelven figuras con título.
+    @return None.
+    """
+    X, y = _noisy_dataset()
+    model = punto1.fit_pca(X, n_components=3)
+    projected = punto1.transform_pca(model, X)
+    figures = [
+        punto1.plot_explained_variance(model, title="H"),
+        punto1.plot_pca_projection(projected[:, :2], y, title="I"),
+        punto1.plot_pca_projection(projected, y, title="J"),
+    ]
+    try:
+        assert [figure.get_suptitle() for figure in figures] == ["H", "I", "J"]
+        assert [len(figure.axes) for figure in figures] == [2, 1, 2]
+    finally:
+        for figure in figures:
+            plt.close(figure)

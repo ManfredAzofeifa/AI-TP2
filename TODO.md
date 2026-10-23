@@ -16,13 +16,23 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 ## Estado actual
 
 - **Listo:** infraestructura compartida (`src/tp2/utils.py`) y puntos 1.1 a
-  1.4 del punto 1, con sus pruebas, figuras, análisis en el notebook y
-  secciones del informe.
+  1.5 del punto 1, con sus pruebas, figuras, análisis en el notebook y
+  secciones del informe. Del 1.5 solo falta que el equipo fije la $D$ óptima.
 - **Resultado de 1.4:** regresión logística sobre los embeddings de
   `all-MiniLM-L6-v2`, tasa 10 y 2000 épocas: tasa de aciertos 0.988 ± 0.002 y
   F1-score 0.953 ± 0.008 en 30 corridas.
-- **Pendiente:** 1.5, punto 2 y punto 3.
-- **Pruebas:** `pytest` da 23 superadas, 3 pendientes y 0 fallidas.
+- **1.3 independiente (23/10/2026):** 1.4 y 1.5 usan solo el dataset de UCI;
+  la tasa 0.1 se agregó a la cuadrícula de calibración del 1.4 y el análisis
+  ya no cita el 1.3. El 1.4 da los mismos resultados aunque se salten las
+  celdas del 1.3.
+- **Resultado de 1.5:** tasa de aciertos y F1 en 30 corridas, con tasa y épocas calibradas para
+  cada k: sin PCA 0.988 y 0.953; k = 192, 0.986 y 0.945; k = 96, 0.983 y
+  0.934; k = 2, 0.940 y 0.750. En la misma partición, el F1 baja 0.008 con
+  192 (en 27 de 30 corridas), 0.019 con 96 y 0.203 con 2.
+- **Dataset versionado (23/10/2026):** `data/raw/SMSSpamCollection` se sube a
+  Git para que todo el equipo use el mismo archivo.
+- **Pendiente:** $D$ óptima (decisión del equipo), punto 2 y punto 3.
+- **Pruebas:** `pytest` da 26 superadas, 2 pendientes y 0 fallidas.
 - **Revisión interna:** `docs/report/review.tex` y su PDF compilado,
   `docs/report/review.pdf`, explican la lógica, los pasos, los resultados y
   las decisiones de todo lo realizado.
@@ -104,6 +114,8 @@ archivo, sus pruebas y las celdas del notebook que lo usan.
 - Puntos 1.4, 1.5 y 2.2: 30 corridas, cada una con una partición
   estratificada 70 % / 30 %. La corrida `k` usa la semilla `SEED + k - 1`
   que entrega el notebook; no usar semillas propias dentro de los archivos.
+- El 1.3 (datos sintéticos) es independiente: 1.4, 1.5 y el punto 2 trabajan
+  solo con el dataset de UCI y no usan nada del 1.3.
 - Los hiperparámetros se eligen con una validación sacada solo del
   entrenamiento, nunca con la prueba (así se calibró 1.4).
 - Punto 1.5: reducir a 50 %, 25 % y 2 dimensiones. El PCA de cada corrida se
@@ -112,14 +124,21 @@ archivo, sus pruebas y las celdas del notebook que lo usan.
 - Punto 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas en todos los puntos: tasa de aciertos y F1-score.
 
+### Autoría
+
+- Ningún asistente de IA figura como autor, coautor ni ayudante en el
+  repositorio: nada de `Co-Authored-By`, firmas ni "Generated with ..." en
+  commits, pull requests, issues, código, notebook ni informe.
+
 ### Documentación, pruebas y datos
 
 - Toda función lleva documentación Doxygen (`"""!` con `@brief`, `@param` y
   `@return`).
 - No borrar pruebas pendientes: implementarlas. Una prueba o función sin
   terminar lanza `NotImplementedError` y se reporta como pendiente.
-- No versionar `data/raw/`, `data/processed/`, modelos, adaptadores ni
-  checkpoints. Nunca incluir credenciales, tokens ni archivos `.env`.
+- El dataset de UCI sí se versiona (`data/raw/SMSSpamCollection`) para que
+  todo el equipo use el mismo archivo. No versionar `data/processed/`,
+  modelos, adaptadores ni checkpoints. Nunca incluir credenciales, tokens ni archivos `.env`.
 - No editar a mano `results/figures/` ni `results/tables/`: el notebook borra
   y regenera su contenido en cada ejecución.
 - Todo número, tabla o figura del informe debe provenir de una ejecución
@@ -136,8 +155,12 @@ sección "Objetivo y protocolo" del notebook y en el informe.
       (19/10/2026), con `sentence-transformers==6.1.0` en `requirements.txt`.
 - [x] `LR_LEARNING_RATE` y `LR_EPOCHS` (1.4): calibrados por F1 en una
       validación del entrenamiento, con empates resueltos por la pérdida en
-      validación: tasa 10 y 2000 épocas.
-- [ ] `OPTIMAL_PCA_DIMENSIONS` (fin de 1.5, se usa en 2.1).
+      validación: tasa 10 y 2000 épocas. La cuadrícula incluye la tasa 0.1
+      desde el 23/10/2026 y la elección no cambió.
+- [ ] `OPTIMAL_PCA_DIMENSIONS` (fin de 1.5, se usa en 2.1). Opciones con los
+      resultados del 1.5: 192 (la que menos pierde), 96 (pierde un poco más,
+      pero son la mitad de histogramas en el punto 2) o probar valores
+      intermedios o menores; 2 queda descartada.
 - [ ] Datos con los que se construyen las densidades (2.1): solo ham del
       entrenamiento (lo que hace hoy el notebook) o todo el entrenamiento.
 - [ ] Criterio del umbral (2.1) y `HISTOGRAM_BINS`.
@@ -173,16 +196,19 @@ Es la ruta crítica: el punto 2 necesita sus características (1.4) y su PCA
   - [x] `test_extract_features_keeps_order_and_contract`,
         `test_grid_search_covers_grid_and_orders_by_score` y
         `test_run_plots_return_figures`.
-- [ ] **1.5 (20)** `fit_pca`, `transform_pca`, `plot_explained_variance` y
-      `plot_pca_projection`. Reducir a 50 %, 25 % y 2 dimensiones, graficar
-      todo el dataset, analizar la clasificación y deducir la $D$ óptima
-      (`OPTIMAL_PCA_DIMENSIONS`).
-  - [ ] Recomendada: `test_fit_pca_recovers_dominant_direction`.
-- [ ] Informe: `01-punto1-regresion-logistica.tex` (1.1 a 1.4 y
-      `04-unit-tests.tex` ya escritos; falta 1.5).
-- Nota para 1.5: `logistic_regression_run` ya acepta `n_components` y guarda
-  la matriz de confusión de cada corrida; las tablas comparativas usan
-  `only_metrics(...)` para mostrar solo `tasa_aciertos` y `f1`.
+- [x] **1.5 (20)** `fit_pca` (SVD de los datos centrados, signo fijo),
+      `transform_pca`, `plot_explained_variance` y `plot_pca_projection`.
+      Reducción a 50 %, 25 % y 2 dimensiones, calibración de tasa y épocas
+      para cada k, 30 corridas, cinco figuras, tablas y análisis.
+  - [x] `test_fit_pca_recovers_dominant_direction`,
+        `test_transform_pca_matches_explained_variance` y
+        `test_pca_plots_return_figures`.
+  - [ ] Fijar `OPTIMAL_PCA_DIMENSIONS` (decisión del equipo).
+- [x] Informe: `01-punto1-regresion-logistica.tex` (1.1 a 1.5) y
+      `04-unit-tests.tex`. Falta el párrafo de la $D$ óptima.
+- Nota: `logistic_regression_run` acepta `n_components`, `learning_rate` y
+  `epochs`; las tablas comparativas usan `only_metrics(...)` para mostrar solo
+  `tasa_aciertos` y `f1`.
 
 ## Punto 2 - `src/tp2/punto2.py` (30 puntos)
 
@@ -238,7 +264,8 @@ Lo siguiente no se pudo comprobar todavía y debe revisarse en la primera
 ejecución:
 
 - [x] Descarga y lectura del dataset real: 5 574 mensajes, 4 827 ham
-      (86.6 %) y 747 spam (13.4 %), como indica UCI.
+      (86.6 %) y 747 spam (13.4 %), como indica UCI. Se descarga en
+      `data/raw/SMSSpamCollection`, que se versiona desde el 23/10/2026.
 - [x] LaTeX instalado (MiKTeX, con `latexmk`) y `review.tex` compilado en
       `docs/report/review.pdf`.
 - [x] El informe completo (`main.tex`) compila: 12 páginas, sin citas sin

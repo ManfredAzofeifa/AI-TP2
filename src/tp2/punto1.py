@@ -865,6 +865,16 @@ def fit_pca(X, n_components):
     """!
     @brief Ajusta un PCA sobre `X`.
 
+    Centra los datos con su media y obtiene los componentes con la
+    descomposición en valores singulares de la matriz centrada
+    (`torch.linalg.svd`): las filas de V^T son las direcciones de máxima
+    varianza, ordenadas de mayor a menor. El cálculo se hace en `float64` para
+    que la varianza de los últimos componentes no se pierda por redondeo.
+
+    El signo de cada componente es arbitrario en la SVD; se fija para que su
+    coordenada de mayor valor absoluto sea positiva, de modo que el resultado
+    (y las figuras) sea el mismo en cualquier máquina.
+
     En las corridas se ajusta solo con el entrenamiento y se aplica a la
     prueba, para no filtrar información del conjunto de prueba.
 
@@ -872,39 +882,191 @@ def fit_pca(X, n_components):
     @param n_components Cantidad k de componentes que se conservan.
     @return PCAModel con media, componentes y varianza explicada.
     """
-    # TODO(punto 1.5): centrar los datos y obtener los componentes (p. ej. torch.linalg.svd).
-    raise NotImplementedError("Punto 1.5: implementar fit_pca.")
+    X = torch.as_tensor(X)
+    if X.ndim != 2:
+        raise ValueError("X debe tener forma (n, D).")
+    n_samples, n_features = X.shape
+    if not 1 <= n_components <= min(n_samples, n_features):
+        raise ValueError(f"n_components debe estar entre 1 y {min(n_samples, n_features)}.")
+
+    data = X.to(torch.float64)
+    mean = data.mean(dim=0)
+    _, singular_values, vh = torch.linalg.svd(data - mean, full_matrices=False)
+    components = vh[:n_components].T
+    largest = components.abs().argmax(dim=0)
+    signs = torch.sign(components[largest, torch.arange(n_components)])
+    components = components * signs
+
+    variance = singular_values**2 / max(n_samples - 1, 1)
+    return PCAModel(
+        mean=mean.to(torch.float32),
+        components=components.to(torch.float32),
+        explained_variance=variance[:n_components].to(torch.float32),
+        explained_variance_ratio=(variance[:n_components] / variance.sum()).to(torch.float32),
+    )
 
 
 def transform_pca(model, X):
     """!
     @brief Proyecta `X` sobre los componentes del modelo.
+
+    Resta la media del ajuste (no la de `X`), así la prueba se proyecta con lo
+    aprendido del entrenamiento.
+
     @param model PCAModel ajustado.
     @param X Tensor de forma (n, D).
     @return Tensor de forma (n, k).
     """
-    # TODO(punto 1.5)
-    raise NotImplementedError("Punto 1.5: implementar transform_pca.")
+    X = torch.as_tensor(X, dtype=torch.float32)
+    if X.ndim != 2 or X.shape[1] != model.mean.shape[0]:
+        raise ValueError(f"X debe tener forma (n, {model.mean.shape[0]}).")
+    return (X - model.mean) @ model.components
 
 
 def plot_explained_variance(model, title="Varianza explicada por componente"):
     """!
     @brief Grafica la varianza explicada individual y acumulada.
+
+    A la izquierda, el porcentaje de la varianza total que explica cada
+    componente; a la derecha, el porcentaje acumulado. En la curva acumulada se
+    marcan los tres casos del apartado 1.5 (2 dimensiones, 25 % y 50 % de D)
+    que caben en el modelo.
+
     @param model PCAModel ajustado.
     @param title Título de la figura.
     @return Figura de Matplotlib (sin mostrar).
     """
-    # TODO(punto 1.5)
-    raise NotImplementedError("Punto 1.5: implementar plot_explained_variance.")
+    ratio = 100 * model.explained_variance_ratio.detach().cpu().numpy().astype(float)
+    cumulative = np.cumsum(ratio)
+    n_components = len(ratio)
+    n_features = model.mean.shape[0]
+    positions = np.arange(1, n_components + 1)
+
+    figure, (individual, accumulated) = plt.subplots(1, 2, figsize=(12.0, 4.8))
+    for axis in (individual, accumulated):
+        _style_axis(axis)
+        axis.set_xlim(0, n_components + 1)
+        axis.set_xlabel("componente principal")
+
+    individual.bar(positions, ratio, width=1.0, color=_BLUE_RAMP[4], linewidth=0)
+    individual.set_ylabel("% de la varianza total")
+    individual.set_ylim(0, ratio.max() * 1.12)
+    individual.annotate(
+        f"componente 1: {ratio[0]:.1f} %", (1, ratio[0]), xytext=(10, -2),
+        textcoords="offset points", va="top", fontsize=9, color=_INK,
+    )
+
+    accumulated.plot(positions, cumulative, color=_BLUE_RAMP[5], linewidth=2)
+    accumulated.set_ylabel("% acumulado de la varianza total")
+    accumulated.set_ylim(0, 100)
+    cases = {2: "2 dimensiones"}
+    cases.setdefault(components_for_fraction(n_features, 0.25), "25 % de D")
+    cases.setdefault(components_for_fraction(n_features, 0.5), "50 % de D")
+    for k, name in sorted(cases.items()):
+        if k > n_components:
+            continue
+        value = cumulative[k - 1]
+        accumulated.scatter(k, value, s=40, color=_INK, edgecolors=_SURFACE, linewidths=1.5, zorder=3)
+        # La curva es creciente: la etiqueta del primer punto va abajo a la derecha y las
+        # demás arriba a la izquierda, siempre del lado donde no pasa la curva.
+        first = k == min(cases)
+        accumulated.annotate(
+            f"{name} (k = {k}): {value:.1f} %", (k, value),
+            xytext=(8, -14) if first else (-6, 8), textcoords="offset points", fontsize=9,
+            color=_INK, ha="left" if first else "right", va="baseline" if first else "bottom",
+        )
+
+    _set_titles(figure, individual, title, "Varianza que explica cada componente.")
+    accumulated.set_title(
+        "Varianza acumulada; los puntos son los casos del apartado 1.5.",
+        loc="left", fontsize=9, color=_INK_SECONDARY, pad=8,
+    )
+    figure.tight_layout()
+    return figure
+
+
+def _class_separation(X, y):
+    """!
+    @brief Mide cuánto separa cada columna a las dos clases (|d| de Cohen).
+
+    Para cada columna, la diferencia de medias entre la clase 1 y la clase 0
+    dividida entre la desviación estándar combinada de ambas clases. Un valor
+    de 1 indica que las medias están a una desviación estándar de distancia.
+
+    @param X Arreglo de forma (n, k).
+    @param y Etiquetas 0/1 de forma (n,).
+    @return Arreglo de forma (k,) con |d| de cada columna.
+    """
+    negatives, positives = X[y == 0], X[y == 1]
+    pooled = np.sqrt((negatives.var(axis=0, ddof=1) + positives.var(axis=0, ddof=1)) / 2)
+    return np.abs(positives.mean(axis=0) - negatives.mean(axis=0)) / pooled
 
 
 def plot_pca_projection(X_reduced, y, title="Proyección del dataset con PCA"):
     """!
-    @brief Grafica el dataset proyectado (dos primeras componentes), coloreado por clase.
+    @brief Grafica el dataset proyectado con PCA, coloreado por clase.
+
+    Con k = 2 se grafican todos los mensajes en el plano de las dos
+    componentes. Con k > 2 no se pueden dibujar todas las dimensiones como
+    puntos, así que la figura tiene dos paneles: los mensajes sobre las dos
+    primeras componentes (las de mayor varianza) y, para cada una de las k
+    componentes, cuánto separa a ham de spam (|d| de Cohen). El segundo panel
+    muestra en qué componentes está la información de clase.
+
     @param X_reduced Tensor de forma (n, k) con k >= 2.
     @param y Etiquetas 0/1 de forma (n,).
     @param title Título de la figura.
     @return Figura de Matplotlib (sin mostrar).
     """
-    # TODO(punto 1.5): decidir cómo graficar los casos de 50 % y 25 % (p. ej. pares de componentes).
-    raise NotImplementedError("Punto 1.5: implementar plot_pca_projection.")
+    X = torch.as_tensor(X_reduced).detach().cpu().numpy().astype(float)
+    y = torch.as_tensor(y).detach().cpu().numpy().astype(int)
+    if X.ndim != 2 or X.shape[1] < 2:
+        raise ValueError("X_reduced debe tener forma (n, k) con k >= 2.")
+    n_components = X.shape[1]
+    class_names = ("ham", "spam")
+
+    if n_components == 2:
+        figure, scatter_axis = plt.subplots(figsize=(7.6, 6.0))
+    else:
+        figure, (scatter_axis, separation_axis) = plt.subplots(
+            1, 2, figsize=(13.0, 5.4), gridspec_kw={"width_ratios": [1.0, 1.25]}
+        )
+
+    _style_axis(scatter_axis)
+    # Primero ham y encima spam, que es la clase minoritaria.
+    for label, size, alpha in ((0, 9, 0.35), (1, 14, 0.7)):
+        points = X[y == label]
+        scatter_axis.scatter(
+            points[:, 0], points[:, 1], s=size, marker=_CLASS_MARKERS[label],
+            color=_CLASS_COLORS[label], alpha=alpha, linewidths=0,
+            label=f"{class_names[label]} ({len(points)})", zorder=3,
+        )
+    scatter_axis.set_xlabel("componente principal 1")
+    scatter_axis.set_ylabel("componente principal 2")
+    _legend(scatter_axis, loc="upper right", markerscale=1.8)
+
+    if n_components == 2:
+        subtitle = "Cada punto es un mensaje del dataset completo."
+    else:
+        subtitle = f"Mensajes sobre las 2 primeras de las {n_components} componentes."
+        separation = _class_separation(X, y)
+        positions = np.arange(1, n_components + 1)
+        _style_axis(separation_axis)
+        separation_axis.bar(positions, separation, width=1.0, color=_BLUE_RAMP[4], linewidth=0)
+        separation_axis.set_xlim(0, n_components + 1)
+        separation_axis.set_ylim(0, separation.max() * 1.15)
+        separation_axis.set_xlabel("componente principal")
+        separation_axis.set_ylabel("separación entre clases |d|")
+        top = np.argsort(separation)[::-1][:3]
+        for index in top:
+            separation_axis.annotate(
+                f"{index + 1}", (positions[index], separation[index]), xytext=(0, 3),
+                textcoords="offset points", ha="center", fontsize=8, color=_INK,
+            )
+        separation_axis.set_title(
+            "Diferencia de medias spam - ham en cada componente, en desviaciones estándar.",
+            loc="left", fontsize=9, color=_INK_SECONDARY, pad=8,
+        )
+    _set_titles(figure, scatter_axis, title, subtitle)
+    figure.tight_layout()
+    return figure

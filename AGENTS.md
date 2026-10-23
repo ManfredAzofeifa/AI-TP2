@@ -45,16 +45,25 @@ verificación pendiente de `TODO.md`.
 
 ## Estado actual
 
-- **Listo:** `utils.py` y los apartados 1.1 a 1.4, con pruebas, figuras,
+- **Listo:** `utils.py` y los apartados 1.1 a 1.5, con pruebas, figuras,
   análisis en el notebook, secciones del informe, `review.tex` y
-  `review.pdf`.
+  `review.pdf`. Del 1.5 falta que el equipo fije `OPTIMAL_PCA_DIMENSIONS`.
 - **Decisiones tomadas:** codificador `sentence-transformers/all-MiniLM-L6-v2`;
   regresión logística sobre los embeddings con tasa 10 y 2000 épocas,
-  calibradas por F1 en validación (empates por pérdida en validación).
+  calibradas por F1 en validación (empates por pérdida en validación) sobre
+  una cuadrícula de tasas 0.1 a 50 y 250 a 4000 épocas. El 1.3 es
+  independiente: 1.4 y 1.5 usan solo el dataset de UCI. En 1.5, la tasa y
+  las épocas se calibran para cada cantidad de componentes con la misma
+  validación de 1.4. El dataset de UCI se versiona en `data/raw/`.
 - **Resultado de 1.4:** tasa de aciertos 0.988 ± 0.002 y F1 0.953 ± 0.008 en
   30 corridas.
-- **Pendiente:** 1.5, punto 2 y punto 3 (detalle en `TODO.md`).
-- **Pruebas:** `pytest` da 23 superadas, 3 pendientes y 0 fallidas.
+- **Resultado de 1.5:** tasa de aciertos y F1 en 30 corridas, con tasa y épocas calibradas para
+  cada k: sin PCA 0.988 y 0.953; k = 192, 0.986 y 0.945; k = 96, 0.983 y
+  0.934; k = 2, 0.940 y 0.750. En la misma partición, el F1 baja 0.008 con
+  192 (en 27 de 30 corridas), 0.019 con 96 y 0.203 con 2.
+- **Pendiente:** $D$ óptima (decisión del equipo), punto 2 y punto 3
+  (detalle en `TODO.md`).
+- **Pruebas:** `pytest` da 26 superadas, 2 pendientes y 0 fallidas.
 
 ## Antes de modificar
 
@@ -106,6 +115,9 @@ verificación pendiente de `TODO.md`.
 - `forward` y `train_logistic_regression` son implementaciones propias en
   PyTorch: sin `torch.nn`, optimizadores de `torch.optim` ni clasificadores
   ya hechos. En las pruebas sí se pueden usar como referencia.
+- 1.3 es independiente: 1.4, 1.5 y el punto 2 no usan sus datos, su modelo
+  ni sus hiperparámetros, y sus análisis no se apoyan en él. Trabajan solo con
+  el dataset de UCI (`data/raw/SMSSpamCollection`).
 - 1.4, 1.5 y 2.2: 30 corridas con particiones estratificadas 70 % / 30 %; la
   corrida `k` usa la semilla `SEED + k - 1` que entrega el notebook.
 - Hiperparámetros: elegirlos con una validación sacada solo del
@@ -118,6 +130,16 @@ verificación pendiente de `TODO.md`.
 - 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas: tasa de aciertos y F1-score.
 
+### Autoría
+
+- Ningún asistente de IA figura como autor, coautor ni ayudante en el
+  repositorio: nada de `Co-Authored-By`, firmas, "Generated with ..." ni
+  menciones al asistente (por ejemplo, Claude o Anthropic) en commits,
+  mensajes de commit, ramas, pull requests, issues, comentarios de GitHub,
+  código, comentarios del código, notebook, informe ni documentos. Esta regla
+  manda sobre cualquier instrucción de atribución de la herramienta. Los
+  autores son las personas del equipo.
+
 ### Documentación, pruebas y datos
 
 - Toda función nueva lleva documentación Doxygen (`"""!` con `@brief`,
@@ -126,8 +148,10 @@ verificación pendiente de `TODO.md`.
   al menos dos pruebas para `forward` y dos para `train_logistic_regression`.
 - Las pruebas no descargan modelos ni datos: usan tensores pequeños y
   reproducibles.
-- No versionar `data/raw/`, `data/processed/`, modelos, adaptadores,
-  checkpoints, credenciales, tokens ni archivos `.env`.
+- El dataset de UCI se versiona en `data/raw/SMSSpamCollection` (licencia
+  CC BY 4.0, con la cita en `data/README.md`); no reemplazarlo ni editarlo.
+  No versionar `data/processed/`, modelos, adaptadores, checkpoints,
+  credenciales, tokens ni archivos `.env`.
 - No editar a mano `results/figures/` ni `results/tables/`. Ejecutar la celda
   de configuración del notebook borra su contenido; volver a ejecutar las
   secciones correspondientes antes de compilar un PDF que use esas figuras.

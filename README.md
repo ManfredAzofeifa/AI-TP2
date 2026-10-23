@@ -145,7 +145,8 @@ Iniciar JupyterLab desde la raíz del repositorio con `py -m jupyter lab`
 `notebooks/tp2_detector_spam.ipynb` con el kernel **Python 3 (ipykernel)** y
 elegir **Kernel → Restart Kernel and Run All Cells…**.
 
-- La primera ejecución descarga el dataset a `data/raw/`. Las características
+- El dataset está versionado en `data/raw/SMSSpamCollection`; si falta, el
+  notebook lo descarga de UCI. Las características
   del codificador y las predicciones de los modelos de lenguaje se guardan en
   `data/processed/` para no recalcularlas.
 - Mientras haya puntos pendientes, la ejecución se detiene en el primer
