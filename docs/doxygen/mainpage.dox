@@ -2,17 +2,17 @@
 @mainpage TP2 - Detector de spam
 
 Esta documentación se genera a partir de una exportación temporal del notebook
-principal, de los módulos de `src/tp2/` y de las pruebas de `tests/`. El
+principal y de las pruebas de `tests/`. El
 archivo exportado bajo `build/doxygen-source/` es un producto de compilación:
 no debe editarse ni versionarse.
 
 @section source Fuente canónica
 
-Cada punto del enunciado se implementa en su propio archivo de `src/tp2/`
-(`punto1.py`, `punto2.py` y `punto3.py`); la infraestructura compartida está
-en `utils.py`. Ningún archivo importa a otro del paquete. El notebook
-`notebooks/tp2_detector_spam.ipynb` es el punto de integración: importa los
-archivos, ejecuta los experimentos y presenta resultados y pruebas.
+El notebook `notebooks/tp2_detector_spam.ipynb` contiene todas las funciones
+compartidas, la implementación de cada punto, los experimentos y sus
+explicaciones. Las pruebas de `tests/` cargan las definiciones del notebook
+mediante `tests/notebook_loader.py` sin duplicar la implementación ni
+ejecutar experimentos completos.
 
 @section generation Generación
 

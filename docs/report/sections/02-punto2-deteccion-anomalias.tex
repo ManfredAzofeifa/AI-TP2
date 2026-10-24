@@ -1,9 +1,16 @@
 \section{Detección de anomalías: umbral de verosimilitud}
 \label{sec:punto2}
 
-% Punto 2 (30 puntos). Archivo: src/tp2/punto2.py. Pruebas: tests/test_punto2.py.
+% Punto 2 (30 puntos). Implementación: notebooks/tp2_detector_spam.ipynb. Pruebas: tests/test_punto2.py.
 
 \subsection{Densidades por histograma}
+
+El equipo confirmó $D=384$ el 24 de octubre de 2026 mediante
+\texttt{OPTIMAL\_PCA\_DIMENSIONS = 384}, a partir de los resultados del
+punto 1.5. Se utilizarán 384 histogramas, uno por componente del PCA
+ajustado exclusivamente con el entrenamiento correspondiente. La elección
+reduce a la mitad las 768 características de MPNet; no completa la
+implementación ni la evaluación del detector de anomalías.
 
 TODO (punto 2.1): describir la estimación de $p_1,\dots,p_D$, graficar y
 comentar las densidades, y definir el umbral sobre la suma de

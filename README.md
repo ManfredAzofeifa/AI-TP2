@@ -6,13 +6,13 @@ Artificial. El objetivo es detectar mensajes spam del dataset
 con regresión logística en PyTorch (con y sin PCA), detección de anomalías por
 densidades de histograma y modelos grandes de lenguaje.
 
-A diferencia del TP1, la implementación no vive dentro del notebook. Cada
-punto del enunciado tiene su propio archivo en `src/tp2/` (`punto1.py`,
-`punto2.py` y `punto3.py`), la infraestructura compartida está en `utils.py`,
-y ningún archivo importa a otro. El notebook `notebooks/tp2_detector_spam.ipynb`
-funciona como `main`: importa los archivos, los combina en los experimentos y
-exporta figuras y tablas a `results/`, que el informe LaTeX de `docs/report/`
-usa para responder el enunciado.
+Toda la implementación vive en `notebooks/tp2_detector_spam.ipynb`: carga de
+datos, funciones compartidas, modelos y experimentos. Las funciones se definen
+en celdas de código junto a la explicación del apartado correspondiente. El
+notebook exporta figuras y tablas a `results/`, que el informe LaTeX de
+`docs/report/` usa para responder el enunciado. Las pruebas externas de
+`tests/` comprueban las definiciones del mismo notebook, sin duplicar la
+implementación.
 
 **Las tareas pendientes, las reglas del proyecto y los pasos para trabajar
 están en [TODO.md](TODO.md) (personas) y [AGENTS.md](AGENTS.md) (agentes de
@@ -20,14 +20,12 @@ IA).**
 
 ## Entregables
 
-- Notebook principal: `notebooks/tp2_detector_spam.ipynb`, junto con
-  `src/tp2/` y `tests/`, de los que depende. Como el enunciado pide "un
-  notebook", el `.zip` debe incluir también esas carpetas (igual que en el
-  TP1 se entregó `utils.py`).
+- Notebook principal: `notebooks/tp2_detector_spam.ipynb`, con toda la
+  implementación y sus explicaciones; `tests/` conserva las pruebas externas.
 - Informe externo escrito en LaTeX: `docs/report/`.
 - PDF final del informe, generado desde LaTeX.
 - Documentación interna con formato Doxygen, generada desde una exportación
-  temporal del notebook, los archivos de `src/tp2/` y las pruebas.
+  temporal del notebook y las pruebas.
 
 La fecha de entrega es el martes 20 de octubre de 2026; la lista completa está
 en [TODO.md](TODO.md#checklist-de-entrega).
@@ -38,66 +36,62 @@ en [TODO.md](TODO.md#checklist-de-entrega).
 AI-TP2/
 ├── AGENTS.md                   instrucciones para agentes de IA
 ├── TODO.md                     tareas, reglas y checklist de entrega (personas)
-├── data/                       dataset descargado y cachés (excluidos de Git)
+├── data/                       dataset original versionado y cachés excluidas de Git
 ├── docs/
 │   ├── assignment/             enunciado original
 │   ├── doxygen/                portada de Doxygen
 │   └── report/                 informe LaTeX (main.tex) y revisión interna (review.tex y review.pdf)
 ├── notebooks/
-│   └── tp2_detector_spam.ipynb notebook principal (main)
+│   └── tp2_detector_spam.ipynb implementación, experimentos y análisis
 ├── results/
 │   ├── figures/                PNG exportados por el notebook
 │   └── tables/                 CSV exportados por el notebook
-├── src/tp2/
-│   ├── punto1.py               1. regresión logística (1.1 a 1.5)
-│   ├── punto2.py               2. detección de anomalías (2.1 y 2.2)
-│   ├── punto3.py               3. modelos de lenguaje (3.1 a 3.3)
-│   └── utils.py                datos, métricas, corridas, figuras y tablas
 ├── submission/                 copias finales para la entrega
-└── tests/                      un archivo de pruebas por punto, más utils
+└── tests/                      pruebas y carga de definiciones del notebook
 ```
 
-## Mapa de puntos y archivos
+## Mapa de secciones
 
-| Punto | Archivo | Pruebas | Sección del informe | Estado |
+| Punto | Sección del notebook | Pruebas | Sección del informe | Estado |
 |---|---|---|---|---|
-| 1. Regresión logística (60) | `src/tp2/punto1.py` | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1 a 1.4 listos |
-| 2. Detección de anomalías (30) | `src/tp2/punto2.py` | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | pendiente |
-| 3. Modelos de lenguaje (10 + 20 extra) | `src/tp2/punto3.py` | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
-| Infraestructura compartida | `src/tp2/utils.py` | `tests/test_utils.py` | — | listo |
+| 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
+| 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | pendiente |
+| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
+| Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
-`utils.py` ya incluye la carga del dataset, las particiones estratificadas
+Las funciones compartidas del notebook incluyen la carga del dataset, las particiones estratificadas
 70/30, las muestras del 30 %, la tasa de aciertos, el F1-score, la repetición
 de 30 corridas con tablas comparativas, la exportación de figuras y tablas, y
-la ejecución de pruebas dentro del notebook. En los archivos de cada punto,
-las funciones pendientes ya tienen su firma, su contrato documentado y un
+la ejecución de pruebas dentro del notebook. En las celdas de cada punto,
+las funciones pendientes tienen su firma, su contrato documentado y un
 `NotImplementedError` que indica el apartado que les corresponde.
 
-## Por qué un archivo por punto
+## Organización y dependencias
 
-El proyecto se podría dividir en más archivos, pero con tres personas un
-archivo por punto hace la asignación directa: cada persona es dueña de su
-archivo, sus pruebas, su sección del notebook y su sección del informe, y los
-conflictos de Git quedan limitados a la celda del notebook que integra su
-parte.
+El notebook es la única fuente de implementación. Cada persona trabaja las
+celdas de su apartado, sus pruebas externas y su sección del informe; los
+cambios de orden o configuración se coordinan para evitar conflictos.
 
-El código de los tres puntos se puede escribir en paralelo. Las dependencias
-que existen son de **resultados**, no de código, y se resuelven en el
-notebook:
+- Los apartados 1.1 y 1.2 implementan un modelo lineal con sesgo,
+  `X @ weights + bias`, seguido de sigmoide, y su entrenamiento por entropía
+  cruzada: la regresión logística que pide el enunciado.
+- El apartado 1.3 usa únicamente datos sintéticos. Sus datos, modelo e
+  hiperparámetros no se reutilizan en 1.4, 1.5 ni el punto 2.
+- El 1.4 usa `sentence-transformers/all-mpnet-base-v2`, con 768 dimensiones.
+  El 1.5 compara esas características con PCA a 384 (50 %), 192 (25 %) y
+  2 dimensiones. En cada una de las 30 corridas, los hiperparámetros se
+  eligen mediante una validación interna extraída solo del entrenamiento;
+  el PCA de esa validación se ajusta únicamente con su subconjunto de ajuste.
+  Para la evaluación final se reajustan PCA y regresor con el entrenamiento
+  completo, conservando la prueba fuera de toda selección.
 
-```mermaid
-flowchart LR
-    utils[utils.py<br/>datos, métricas, corridas] --> nb[tp2_detector_spam.ipynb]
-    p1[punto1.py<br/>1.1 a 1.5] --> nb
-    p2[punto2.py<br/>2.1 y 2.2] --> nb
-    p3[punto3.py<br/>3.1 a 3.3] --> nb
-    p1 -. características, PCA y D óptima .-> p2
-```
-
-- El punto 2 necesita, para ejecutarse, las características (1.4), el PCA y
-  la $D$ óptima (1.5). Se puede programar y probar antes con tensores
-  sintéticos y una $D$ provisional.
-- El punto 3 solo usa los textos originales y `utils.py`: es independiente.
+- El equipo confirmó `OPTIMAL_PCA_DIMENSIONS = 384` el 24/10/2026. Reduce
+  a la mitad las 768 características y conserva 96.16 % de varianza en el
+  PCA descriptivo. El F1 medio es 0.9637 frente a 0.9641 sin PCA, con una
+  diferencia pareada de −0.0004; esto no constituye una prueba de equivalencia
+  estadística. El punto 2 usará 384 histogramas, uno por componente; su
+  implementación y evaluación siguen pendientes.
+- El punto 3 solo usa los textos originales y las funciones compartidas: es independiente.
 - El punto 1 vale 60 puntos y es la ruta crítica.
 
 ## Preparación del entorno
@@ -133,9 +127,10 @@ py -c "import torch, pandas, matplotlib, pytest; print('ok')"
 aplicaciones de Windows 11, pandas 3.0.6 queda bloqueado al importarse.
 
 En ambos casos, el último comando debe imprimir `ok`. `requirements.txt`
-incluye `sentence-transformers`, que usa el codificador del punto 1.4; la
-primera ejecución descarga el modelo `all-MiniLM-L6-v2` (unos 90 MB) a la
-caché de Hugging Face. Las dependencias del punto 3 (`peft`, ...) están
+incluye `sentence-transformers`, que usa el codificador del punto 1.4:
+`sentence-transformers/all-mpnet-base-v2` (`ENCODER_NAME`). Su primera carga puede descargarlo
+a la caché de Hugging Face. No descargar modelos grandes ni ejecutar
+inferencias largas sin confirmación. Las dependencias del punto 3 (`peft`, ...) están
 comentadas hasta que el equipo elija los modelos.
 
 ## Ejecución
@@ -149,11 +144,21 @@ elegir **Kernel → Restart Kernel and Run All Cells…**.
   notebook lo descarga de UCI. Las características
   del codificador y las predicciones de los modelos de lenguaje se guardan en
   `data/processed/` para no recalcularlas.
+- El dataset original contiene texto y etiqueta, no vectores de 768
+  características. La dimensión inicial viene de MPNet-base-v2. Los
+  resultados anteriores con MiniLM-L6-v2 (384 dimensiones) quedan invalidados
+  para el nuevo protocolo. Ya se regeneraron características, calibración y
+  30 corridas por método: F1 sin PCA 0.9641; con 384 componentes 0.9637;
+  con 192, 0.9596; con 2, 0.7845.
+- El archivo original de UCI tiene 5574 mensajes (4827 ham y 747 spam),
+  incluidos 403 duplicados adicionales. Se conserva sin editar; las
+  particiones por filas pueden compartir textos idénticos entre entrenamiento
+  y prueba, limitación que debe considerarse al interpretar las métricas.
 - Mientras haya puntos pendientes, la ejecución se detiene en el primer
   `NotImplementedError` e indica qué apartado falta. El punto 3.3 (extra) se
   omite solo si `LORA_MODEL` no está definido.
-- La sección **Pruebas unitarias** solo necesita la celda de configuración:
-  se puede ejecutar en cualquier momento para ver el avance.
+- La sección **Pruebas unitarias** necesita las definiciones y la celda de
+  configuración; no requiere ejecutar los experimentos para ver el avance.
 
 ## Pruebas unitarias
 
@@ -169,15 +174,16 @@ py -m pytest
 
 El resultado esperado en cada momento está en el "Estado actual" de
 [TODO.md](TODO.md#estado-actual). Las pruebas sin implementar aparecen como
-omitidas con el motivo `Pendiente`. `tests/test_module_independence.py` falla si un archivo de
-`src/tp2/` importa a otro del paquete o si importa al inicio una dependencia
-opcional.
+omitidas con el motivo `Pendiente`. `tests/notebook_loader.py` carga las
+definiciones del notebook para probarlas sin ejecutar experimentos,
+descargar datos ni cargar modelos. Las comprobaciones estructurales también
+verifican la organización del notebook y las dependencias opcionales.
 
 ## Documentación interna
 
 Doxygen no consume el notebook directamente. Su fuente documentable se genera
-de forma temporal y nunca se edita manualmente; `src/tp2/` y `tests/` se
-incluyen directamente:
+de forma temporal y nunca se edita manualmente; `tests/` se incluye
+directamente:
 
 ```bash
 jupyter nbconvert --to python notebooks/tp2_detector_spam.ipynb --output tp2_detector_spam --output-dir build/doxygen-source
@@ -218,10 +224,12 @@ ejecutar las secciones correspondientes del notebook.
 
 ## Estado de verificación
 
-- `pytest` y las celdas de configuración y de pruebas del notebook se
-  ejecutaron correctamente en Windows con Python 3.14.
-- La descarga del dataset real, la compilación del informe y Doxygen no se
-  han probado todavía; ver [TODO.md](TODO.md#verificación-pendiente).
+El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
+[TODO.md](TODO.md#estado-actual) y en la revisión interna. La auditoría del
+24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
+de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
+se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
+Las pruebas actuales dan 30 superadas, 2 pendientes y ninguna fallida.
 
 ## Equipo
 

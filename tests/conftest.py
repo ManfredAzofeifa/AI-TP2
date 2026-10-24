@@ -1,14 +1,9 @@
 """!
 @file conftest.py
-@brief Configuración de pytest: agrega `src/` al path y reporta como pendientes las pruebas sin implementar.
+@brief Configuración de pytest y reporte de pruebas todavía pendientes.
 """
 
-import sys
-from pathlib import Path
-
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 
 @pytest.hookimpl(wrapper=True)
@@ -17,7 +12,7 @@ def pytest_runtest_makereport(item, call):
     @brief Convierte un `NotImplementedError` en una prueba omitida con el motivo "Pendiente".
 
     Así `pytest` distingue el trabajo todavía no hecho de un error real, igual
-    que `utils.run_tests` en el notebook.
+    que `run_tests` en el notebook.
 
     @param item Prueba que se está ejecutando.
     @param call Información de la fase ejecutada.

@@ -27,48 +27,54 @@ verificación pendiente de `TODO.md`.
   PyTorch, con y sin PCA; (2) detección de anomalías con densidades por
   histograma y un umbral de verosimilitud; y (3) modelos grandes de lenguaje.
 - Entrega: martes 20 de octubre de 2026. Entregable: `.zip` con fuentes
-  LaTeX, PDF y el notebook documentado, más `src/tp2/` y `tests/`.
+  LaTeX, PDF y el notebook documentado, más `tests/` para verificación externa.
 - Enunciado: `docs/assignment/TrabajoPractico2_detector_ataques_supervisado_no_supervisado.pdf`
   (se puede leer con `pdftotext -layout`).
 
 | Ruta | Contenido |
 |---|---|
-| `src/tp2/punto1.py` | Punto 1: regresión logística (1.1 a 1.5) |
-| `src/tp2/punto2.py` | Punto 2: detección de anomalías (2.1 y 2.2) |
-| `src/tp2/punto3.py` | Punto 3: modelos de lenguaje (3.1 a 3.3) |
-| `src/tp2/utils.py` | Datos, particiones, métricas, corridas, figuras, tablas y pruebas en el notebook |
-| `notebooks/tp2_detector_spam.ipynb` | `main`: único lugar donde se combinan los archivos |
-| `tests/test_puntoN.py`, `tests/test_utils.py` | Pruebas por punto y de la infraestructura |
-| `tests/test_module_independence.py` | Verifica que ningún archivo de `src/tp2/` importe a otro |
+| `notebooks/tp2_detector_spam.ipynb` | Única implementación: utilidades, puntos 1 a 3, experimentos y análisis |
+| `tests/test_puntoN.py`, `tests/test_utils.py` | Pruebas que cargan las definiciones del notebook con `tests/notebook_loader.py` |
+| `tests/test_notebook_structure.py` | Validez del notebook autocontenido y dependencias opcionales locales |
 | `docs/report/sections/` | Informe LaTeX, una sección por punto |
 | `docs/report/review.tex`, `docs/report/review.pdf` | Revisión interna (no se entrega): lógica, pasos, resultados y registro de decisiones; el PDF se compila con `./build_pdf.sh review` y se versiona |
 
 ## Estado actual
 
-- **Listo:** `utils.py` y los apartados 1.1 a 1.5, con pruebas, figuras,
-  análisis en el notebook, secciones del informe, `review.tex` y
-  `review.pdf`. Del 1.5 falta que el equipo fije `OPTIMAL_PCA_DIMENSIONS`.
-- **Decisiones tomadas:** codificador `sentence-transformers/all-MiniLM-L6-v2`;
-  regresión logística sobre los embeddings con tasa 10 y 2000 épocas,
-  calibradas por F1 en validación (empates por pérdida en validación) sobre
-  una cuadrícula de tasas 0.1 a 50 y 250 a 4000 épocas. El 1.3 es
-  independiente: 1.4 y 1.5 usan solo el dataset de UCI. En 1.5, la tasa y
-  las épocas se calibran para cada cantidad de componentes con la misma
-  validación de 1.4. El dataset de UCI se versiona en `data/raw/`.
-- **Resultado de 1.4:** tasa de aciertos 0.988 ± 0.002 y F1 0.953 ± 0.008 en
-  30 corridas.
-- **Resultado de 1.5:** tasa de aciertos y F1 en 30 corridas, con tasa y épocas calibradas para
-  cada k: sin PCA 0.988 y 0.953; k = 192, 0.986 y 0.945; k = 96, 0.983 y
-  0.934; k = 2, 0.940 y 0.750. En la misma partición, el F1 baja 0.008 con
-  192 (en 27 de 30 corridas), 0.019 con 96 y 0.203 con 2.
-- **Pendiente:** $D$ óptima (decisión del equipo), punto 2 y punto 3
-  (detalle en `TODO.md`).
-- **Pruebas:** `pytest` da 26 superadas, 2 pendientes y 0 fallidas.
+- **Estructura (24/10/2026):** implementación autocontenida en el único notebook;
+  se retira la distribución en archivos por punto y `utils.py`.
+- **1.1 y 1.2:** regresión logística propia: score lineal básico con sesgo
+  `X @ weights + bias`, sigmoide y entropía cruzada. Se entrenan pesos y sesgo.
+- **1.3:** demostración sintética aislada; sus datos, modelos e hiperparámetros
+  no se reutilizan en 1.4, 1.5 ni 2.
+- **Codificador confirmado:** `sentence-transformers/all-mpnet-base-v2`,
+  características de 768 dimensiones. El dataset UCI contiene texto y etiqueta;
+  la dimensión proviene del codificador, no del archivo de datos.
+- **Evaluación corregida:** validación interna en cada corrida y para cada k;
+  selección automática por F1, con pérdida como desempate. PCA se ajusta solo
+  en ajuste interno al calibrar y en todo el entrenamiento al evaluar.
+- **Resultados:** las cifras anteriores de MiniLM/384 son históricas y no
+  representan MPNet/768 ni el protocolo corregido. Ejecución MPNet/768 verificada en 30 corridas por método.
+  F1: sin PCA 0.9641 ± 0.0063; con 384 componentes 0.9637 ± 0.0075; con
+  192, 0.9596 ± 0.0082; con 2, 0.7845 ± 0.0189.
+  Tasa de aciertos sin PCA: 0.9906 ± 0.0016.
+- **D óptima confirmada (24/10/2026):** `OPTIMAL_PCA_DIMENSIONS = 384`,
+  la mitad de las 768 características. Conserva 96.16 % de varianza en el
+  PCA descriptivo y F1 medio 0.9637 frente a 0.9641 sin PCA (diferencia
+  pareada −0.0004); esta cercanía no prueba equivalencia estadística.
+  El punto 2 trabajará con 384 histogramas, uno por componente.
+- **Pendiente:** puntos 2 y 3.
+- **Pruebas verificadas:** 30 superadas, 2 pendientes (2.1 y 3.1), 0 fallidas.
+  Las 120 corridas UCI se ejecutaron antes de crear los datos sintéticos de 1.3.
+  La celda de pruebas también dio 30/2/0. El IDE no resuelve estáticamente
+  algunos imports de tests y atributos del módulo cargado dinámicamente;
+  su ejecución real y pytest pasan. Revisión PDF compilada; informe preliminar
+  de 17 páginas también compila, con puntos 2 y 3 pendientes.
 
 ## Antes de modificar
 
 1. Leer este archivo, `TODO.md`, `README.md` y el apartado del enunciado.
-2. Confirmar con la persona qué apartado se trabaja.
+2. Respetar el alcance indicado por la persona; aclarar solo lo que quede ambiguo.
 3. Ejecutar `py -m pytest` (Windows) o `python3 -m pytest` y comparar con el
    [estado actual](#estado-actual).
 4. Ubicar lo pendiente con `git grep -n "TODO(punto N"`.
@@ -77,37 +83,38 @@ verificación pendiente de `TODO.md`.
 
 ### Estructura
 
-- Implementar cada apartado solo en el archivo de su punto. No crear archivos
-  nuevos en `src/tp2/` sin aprobación.
-- Ningún archivo de `src/tp2/` importa a otro del paquete, ni siquiera a
-  `utils.py`. La combinación se hace solo en el notebook.
+- Implementar toda la lógica en `notebooks/tp2_detector_spam.ipynb`, organizada
+  por apartados. No mantener copias de la implementación en archivos `.py`.
+- Las celdas de definiciones empiezan por `# Definiciones:` y solo contienen
+  imports base, constantes, clases y funciones. `tests/notebook_loader.py` las
+  carga sin ejecutar configuración, descargas ni experimentos.
 - Importar las dependencias opcionales (`transformers`,
   `sentence-transformers`, `peft`, `accelerate`) dentro de las funciones que
   las usan, nunca al inicio del archivo.
 - No leer variables globales del notebook: todo llega como argumento.
 - Las funciones de graficación devuelven la figura sin mostrarla, con un
-  título descriptivo; el notebook la muestra con `utils.show_figure`.
-- `utils.show_figure` nombra el PNG con `figure.suptitle` o con el título
+  título descriptivo; el notebook la muestra con `show_figure`.
+- `show_figure` nombra el PNG con `figure.suptitle` o con el título
   centrado del eje. Un título solo alineado a la izquierda produce
   `figura.png` y cada figura sobrescribe a la anterior: poner el título como
-  `suptitle` (así lo hace `punto1._set_titles`).
-- Estilo de las gráficas (reutilizar el de `punto1.py`): azul `#2a78d6` para
+  `suptitle` (así lo hace `_set_titles`).
+- Estilo de las gráficas (reutilizar el de las funciones del punto 1): azul `#2a78d6` para
   ham o clase 0 y naranja `#eb6834` para spam o clase 1, un marcador distinto
   por clase, ejes y cuadrícula discretos, texto en tinta neutra (nunca del
   color de la serie) y un subtítulo que explica cómo leer la figura.
-- Mantener delgadas las celdas del notebook; la lógica va en el archivo del
-  punto.
+- Separar celdas de definiciones, configuración, ejecución y análisis. Las
+  funciones reciben sus datos y parámetros explícitamente.
 
 ### Contratos
 
 - Características: tensor `float32` de forma `(n, D)`, en el orden del dataset.
 - Etiquetas y predicciones: tensor `int64` de forma `(n,)`, `ham = 0` y
   `spam = 1`; spam es la clase positiva del F1-score y la anomalía del punto 2.
-- Particiones y muestras: `utils.stratified_split` y `utils.sample_indices`.
-- Corridas: `run(seed) -> dict` de métricas para `utils.repeat_experiment`.
-- Métricas: `utils.classification_metrics` (`tasa_aciertos` y `f1`).
+- Particiones y muestras: `stratified_split` y `sample_indices`.
+- Corridas: `run(seed) -> dict` de métricas para `repeat_experiment`.
+- Métricas: `classification_metrics` (`tasa_aciertos` y `f1`).
 - No cambiar firmas ni contratos ya definidos sin aprobación; si se aprueba,
-  actualizar en el mismo cambio el archivo, sus pruebas y las celdas del
+  actualizar en el mismo cambio la definición, sus pruebas y las celdas del
   notebook que lo usan.
 
 ### Protocolo experimental
@@ -120,13 +127,16 @@ verificación pendiente de `TODO.md`.
   el dataset de UCI (`data/raw/SMSSpamCollection`).
 - 1.4, 1.5 y 2.2: 30 corridas con particiones estratificadas 70 % / 30 %; la
   corrida `k` usa la semilla `SEED + k - 1` que entrega el notebook.
-- Hiperparámetros: elegirlos con una validación sacada solo del
-  entrenamiento, nunca con la prueba.
+- Hiperparámetros: calibrarlos por separado en cada corrida con una validación
+  sacada solo de su entrenamiento; aplicar automáticamente el ganador. No
+  reutilizar la calibración de una partición en las otras 29.
 - `logistic_regression_run` del notebook devuelve métricas y matriz de
   confusión; las tablas comparativas deben pasar por `only_metrics(...)`.
-- 1.5: 50 %, 25 % y 2 dimensiones; el PCA se ajusta solo con el
-  entrenamiento de cada corrida.
-- 2.1: usar `OPTIMAL_PCA_DIMENSIONS` deducida en 1.5.
+- 1.5: 50 %, 25 % y 2 dimensiones (384, 192 y 2 con D=768); PCA se
+  ajusta solo con ajuste interno al calibrar y con entrenamiento al evaluar.
+  Comparar con el caso sin PCA usando las mismas particiones y semillas.
+- 2.1: usar `OPTIMAL_PCA_DIMENSIONS = 384`, confirmada por el equipo
+  a partir de 1.5; ajustar el PCA solo con el entrenamiento de cada corrida.
 - 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas: tasa de aciertos y F1-score.
 
@@ -146,8 +156,8 @@ verificación pendiente de `TODO.md`.
   `@param` y `@return`), en español, con el estilo de los archivos existentes.
 - Implementar las pruebas pendientes en lugar de borrarlas. El enunciado exige
   al menos dos pruebas para `forward` y dos para `train_logistic_regression`.
-- Las pruebas no descargan modelos ni datos: usan tensores pequeños y
-  reproducibles.
+- Las pruebas cargan las definiciones del notebook y usan tensores pequeños
+  reproducibles; no descargan modelos ni datos.
 - El dataset de UCI se versiona en `data/raw/SMSSpamCollection` (licencia
   CC BY 4.0, con la cita en `data/README.md`); no reemplazarlo ni editarlo.
   No versionar `data/processed/`, modelos, adaptadores, checkpoints,
@@ -161,7 +171,7 @@ verificación pendiente de `TODO.md`.
 
 ## Flujo por apartado
 
-1. Implementar la función en el archivo del punto, sin cambiar su firma.
+1. Implementar la función en una celda de definiciones de su apartado.
 2. Implementar o completar sus pruebas en `tests/test_puntoN.py`.
 3. Ejecutar `pytest`: 0 fallidas.
 4. Si el apartado se ejecuta en el notebook, ejecutar la celda de
@@ -184,14 +194,19 @@ verificación pendiente de `TODO.md`.
 
 ## Límites
 
-- No tomar las decisiones pendientes del equipo ($D$ óptima, umbral, modelos
+- No tomar las decisiones pendientes del equipo (umbral, modelos
   de lenguaje, LoRA o DoRA; lista en `TODO.md`): proponer opciones y esperar
   confirmación.
 - No descargar modelos grandes ni ejecutar inferencias largas sin
   confirmación.
-- No inventar ni estimar resultados: todo número, tabla o figura del informe
-  sale de una ejecución completa del notebook.
-- No tocar archivos de otro punto ni `utils.py` sin que la persona lo pida.
+- No inventar ni estimar resultados: toda métrica, tabla o figura experimental
+  del informe sale de la ejecución completa de su sección. La ejecución final
+  completa queda pendiente mientras los puntos 2 y 3 no estén implementados.
+- Las cachés identifican dataset, codificador y configuración; validar forma
+  `(5574, 768)` y finitud antes de usar características. El archivo UCI se
+  conserva íntegro; sus textos repetidos son una limitación de la partición por filas.
+- Mantener el alcance solicitado dentro del notebook; coordinar ediciones por
+  celdas cuando varias personas trabajen a la vez.
 - No hacer commit, push ni integrar a `main` sin aprobación.
 
 ## Comandos útiles

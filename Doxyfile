@@ -1,10 +1,9 @@
 PROJECT_NAME           = "TP2 - Detector de spam"
-PROJECT_BRIEF          = "Documentacion interna del notebook, sus modulos y pruebas"
+PROJECT_BRIEF          = "Documentacion interna de la implementacion en el notebook y sus pruebas"
 OUTPUT_DIRECTORY       = build/doxygen
 
 INPUT                  = docs/doxygen/mainpage.dox \
                          build/doxygen-source \
-                         src/tp2 \
                          tests
 FILE_PATTERNS          = *.py *.dox
 RECURSIVE              = YES

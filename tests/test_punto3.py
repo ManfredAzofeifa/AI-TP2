@@ -6,7 +6,7 @@ Las pruebas no deben descargar ni ejecutar modelos grandes: se prueban las
 partes deterministas, como la interpretación de las respuestas.
 """
 
-from tp2 import punto3
+from notebook_loader import notebook as punto3
 
 
 def test_parse_label_handles_responses():

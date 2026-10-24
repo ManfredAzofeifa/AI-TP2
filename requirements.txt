@@ -10,7 +10,7 @@ torch==2.14.0
 ipywidgets
 # Unit tests. The notebook can also run them without pytest.
 pytest
-# Point 1.4: encoder sentence-transformers/all-MiniLM-L6-v2, validated on
+# Point 1.4: encoder sentence-transformers/all-mpnet-base-v2 (768 features), using
 # Windows with Python 3.14 (transformers is installed as its dependency).
 sentence-transformers==6.1.0
 transformers==5.20.2

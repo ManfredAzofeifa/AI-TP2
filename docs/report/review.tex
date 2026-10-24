@@ -1,551 +1,311 @@
-% Documento interno de revisión del proyecto: lógica, pasos y decisiones.
-% No forma parte del informe que se entrega (main.tex). Se versiona junto con su
-% PDF compilado (docs/report/review.pdf). Para recompilarlo desde la raíz del
-% repositorio, sin dejar archivos intermedios en docs/report:
-%   ./build_pdf.sh review
+% Revisión interna; compilar con ./build_pdf.sh review y conservar .tex y PDF juntos.
 \documentclass[11pt,letterpaper]{article}
-
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-% Fuentes vectoriales (sin lmodern, T1 usa fuentes de mapa de bits borrosas).
-\usepackage{lmodern}
-\usepackage{microtype}
+\usepackage{lmodern,microtype}
 \usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{array}
-\usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{float}
-\usepackage{graphicx}
-\usepackage{caption}
+\usepackage{amsmath,amssymb,array,booktabs,longtable,float,graphicx,caption}
 \usepackage[hidelinks]{hyperref}
 \usepackage[margin=1in]{geometry}
-
 \graphicspath{{../../results/figures/}}
-% Permite estirar un poco los espacios antes que dejar rutas largas fuera del margen.
 \setlength{\emergencystretch}{2em}
-
-\title{Trabajo práctico 2: revisión del proyecto\\[0.5ex]
-\large Lógica, pasos y decisiones}
+\let\originalunderscore\_
+\renewcommand{\_}{\originalunderscore\allowbreak}
+\title{Trabajo práctico 2: revisión del proyecto\\[0.5ex]\large Lógica, pasos, resultados y decisiones}
 \author{Alejandro Quesada \and Jose Herrera \and Manfred Azofeifa}
-\date{\today}
-
+\date{24 de octubre de 2026}
 \begin{document}
-
 \maketitle
-
 \begin{abstract}
-Este documento explica qué se ha hecho en el Trabajo práctico 2, en qué orden,
-con qué lógica y por qué se tomó cada decisión. Es una guía interna para que
-cualquier integrante del equipo (o un agente de IA) entienda el estado del
-proyecto sin leer todo el código. No reemplaza al informe que se entrega
-(\texttt{main.tex}), que responde el enunciado. Se actualiza cada vez que se
-completa un apartado o se toma una decisión.
+Revisión interna del detector de spam: recoge la implementación en un único
+cuaderno, la auditoría del dataset, el modelo con sesgo y la evaluación de
+regresión logística con y sin PCA. Los resultados anteriores de MiniLM con
+384 características no describen el nuevo codificador MPNet con 768 ni el
+protocolo de validación corregido. Se completaron 30 corridas por cada una
+de las cuatro variantes de regresión con MPNet. Este documento se mantiene junto con
+\texttt{TODO.md}, \texttt{AGENTS.md} y su PDF compilado.
 \end{abstract}
-
 \tableofcontents
 \newpage
 
-%-------------------------------------------------------------------------------
-\section{El problema}
-%-------------------------------------------------------------------------------
+\section{Alcance y organización}
+El enunciado pide detectar spam de SMSSpamCollection (UCI) mediante regresión
+logística propia, detección de anomalías por histogramas y modelos grandes de
+lenguaje. La entrega indicada en el enunciado es el 20 de octubre de 2026.
 
-El enunciado pide detectar mensajes SMS no deseados (\emph{spam}) del dataset
-público SMSSpamCollection del repositorio UCI, con tres enfoques:
+Desde el 24 de octubre se concentra toda la implementación en
+\texttt{notebooks/tp2\_detector\_spam.ipynb}: utilidades, funciones de los tres
+puntos, experimentos y análisis. Se retira la regla de un archivo por punto y
+el paquete \texttt{src/tp2/}. Se conserva la organización por apartados dentro
+del cuaderno, sin copias de las funciones en archivos Python.
 
+\begin{center}
+\begin{tabular}{p{0.38\linewidth}p{0.55\linewidth}}
+\toprule
+\textbf{Ubicación} & \textbf{Responsabilidad}\\
+\midrule
+Cuaderno principal & Definiciones, configuración, ejecución y análisis en
+celdas diferenciadas.\\
+\texttt{tests/} & Pruebas externas que ejecutan las definiciones del cuaderno.\\
+\texttt{docs/report/sections/} & Informe LaTeX, organizado por punto.\\
+\texttt{results/} & Figuras y tablas producidas por el cuaderno.\\
+\texttt{data/raw/} & Dataset original versionado, sin modificaciones.\\
+\texttt{data/processed/} & Cachés regenerables, excluidas de Git.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Las celdas reutilizables comienzan por \texttt{\# Definiciones:}.
+\texttt{tests/notebook\_loader.py} las ejecuta en orden en un espacio de
+nombres común, sin ejecutar descargas, configuración de exportación ni
+experimentos. Así las pruebas comprueban la implementación que se entrega.
+Las dependencias opcionales se importan dentro de las funciones que las usan.
+
+Se mantienen los contratos: características \texttt{float32} de forma
+$(n,D)$; etiquetas y predicciones \texttt{int64} de forma $(n,)$; ham $=0$,
+spam $=1$ y spam como clase positiva del F1. Las funciones reciben datos y
+parámetros explícitamente y llevan documentación Doxygen en español.
+
+\section{Auditoría del dataset y sus dimensiones}
+El archivo local \texttt{data/raw/SMSSpamCollection} coincide byte por byte
+con el del ZIP oficial de UCI. Su SHA256 es
+\texttt{7d039a24a6083ed9ef0f806ebad56bbb9\allowbreak 76e3aeb8de05669173bfdc4996c239d}.
+Tiene 5574 filas: 4827 ham y 747 spam. Cada fila contiene etiqueta y texto;
+no contiene 768 columnas de características. No hay mensajes vacíos ni errores
+de UTF-8. Hay 5171 textos únicos y 403 repeticiones adicionales, sin etiquetas
+contradictorias para un mismo texto.
+
+\paragraph{De dónde sale $D$.} El codificador anterior,
+\texttt{sentence-transformers/all-MiniLM-L6-v2}, produce 384 características.
+El equipo confirmó cambiar a
+\texttt{sentence-transformers/all-mpnet-base-v2}, que produce 768. Las fichas
+oficiales describen ambas dimensiones:
+\href{https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2}{MiniLM}
+y \href{https://huggingface.co/sentence-transformers/all-mpnet-base-v2}{MPNet}.
+La dimensión depende del codificador; cambiarla exige recalcular
+características, calibración, métricas, tablas y figuras.
+
+\paragraph{Limitación de duplicados.} Se conserva el archivo original y el
+protocolo estratificado por filas. Por ello un texto idéntico puede aparecer
+en entrenamiento y prueba, lo que limita la interpretación como generalización
+a mensajes nuevos. Una evaluación agrupada por texto sería otro protocolo y
+requiere acordarla con el equipo; no se deduplicó silenciosamente.
+
+\section{Puntos 1.1 y 1.2: modelo básico con sesgo}
+El enunciado pide regresión logística. La confirmación del equipo mantiene
+una parte lineal básica con sesgo y una sigmoide:
+\[
+ z=Xw+b,\qquad p(y=1\mid x)=\sigma(z).
+\]
+\texttt{forward} calcula probabilidades; el sesgo es un escalar entrenable.
+La sigmoide se evalúa con $e^{-|z|}$ para evitar desbordamientos con logits
+extremos. El entrenamiento propio minimiza la entropía cruzada binaria media
+con descenso del gradiente por lotes completos:
+\[
+ \nabla_w L=X^\top(p-y)/n,\qquad \partial L/\partial b=\overline{p-y}.
+\]
+Se actualizan tanto $w$ como $b$. No se utilizan \texttt{torch.nn},
+optimizadores de \texttt{torch.optim} ni clasificadores ya implementados.
+La pérdida se calcula a partir de logits de forma estable. El historial
+conserva la pérdida inicial y una por época.
+
+Las cuatro pruebas obligatorias verifican probabilidades con pesos nulos,
+sigmoide y estabilidad extrema, primer paso de gradiente (incluido el sesgo)
+y clasificación reproducible de datos separables. En pruebas se permite
+Autograd como referencia independiente.
+
+\section{Punto 1.3: demostración aislada}
+El conjunto sintético bidimensional verifica el entrenamiento y la evolución
+de su frontera frente a una recta conocida con sesgo. Se conservan sus propias
+semillas, tasa y épocas. Sus datos, modelo e hiperparámetros no se usan en
+1.4, 1.5 ni 2: esos apartados trabajan exclusivamente con los mensajes UCI y
+sus características. Las funciones genéricas \texttt{forward} y de
+entrenamiento son compartidas; los resultados experimentales no lo son.
+
+\section{Punto 1.4: extracción y evaluación corregidas}
+Se codifica cada mensaje original con MPNet y se verifica forma $(5574,768)$,
+tipo \texttt{float32}, orden de las filas y valores finitos. La caché identifica
+el dataset y el codificador para impedir reutilizar características de otro
+modelo o archivo. El codificador preentrenado no se ajusta sobre UCI, así que
+la extracción puede realizarse una vez antes de las particiones.
+
+\subsection{Validación dentro de cada corrida}
+Se mantienen 30 particiones estratificadas 70\,\%/30\,\%, con semillas
+$2026,\ldots,2055$. En cada una:
 \begin{enumerate}
-    \item \textbf{Punto 1 (60 puntos):} regresión logística propia en
-    PyTorch: evaluación (\texttt{forward}, 1.1), entrenamiento (1.2),
-    verificación con datos sintéticos (1.3), clasificación de los mensajes a
-    partir de las características de un codificador (1.4) y reducción de
-    dimensionalidad con PCA (1.5).
-    \item \textbf{Punto 2 (30 puntos):} detección de anomalías con
-    densidades por histograma y un umbral de verosimilitud.
-    \item \textbf{Punto 3 (10 puntos y 20 extra):} clasificación con modelos
-    grandes de lenguaje y, como extra, ajuste fino con LoRA o DoRA.
+\item Se reserva el 30\,\% para prueba y no se usa al seleccionar parámetros.
+\item Se divide el entrenamiento en 80\,\% de ajuste y 20\,\% de validación.
+\item Se prueban tasas $\{0.1,0.5,1,2,5,10,20,50\}$ y épocas
+$\{250,500,1000,2000,4000\}$. Se elige mayor F1 de validación y, en caso de
+empate, menor pérdida de validación.
+\item Se aplica automáticamente la combinación ganadora al entrenar un modelo
+nuevo sobre todo el 70\,\% de entrenamiento; se evalúa una vez en su prueba.
 \end{enumerate}
 
-La entrega es el martes 20 de octubre de 2026: un \texttt{.zip} con el código
-fuente LaTeX, el PDF y el notebook documentado.
+Antes se calibraba una sola vez con la primera partición y se reutilizaba
+la elección en las otras 29. Esa validación incluía 244 mensajes que luego
+estaban en la prueba de la semilla 2027 y 226 de la semilla 2028. Por tanto
+esas pruebas no estaban aisladas de la selección global. No se puede afirmar
+que el sesgo fuera pequeño sin medirlo. Además, la calibración solo imprimía
+una advertencia si su ganador no coincidía con las constantes manuales; ahora
+se consume el ganador directamente.
 
-%-------------------------------------------------------------------------------
-\section{Organización del repositorio}
-%-------------------------------------------------------------------------------
-
-\subsection{Estructura}
-
+% RESULTADOS_14
+\subsection{Resultados de la nueva ejecución}
+Se ejecutaron las 30 corridas completas con MPNet/768, antes de ejecutar la
+demostración 1.3: la evaluación no necesita sus datos ni su entrenamiento.
+Las cifras son medias y desviaciones muestrales entre corridas.
 \begin{center}
-\begin{tabular}{>{\ttfamily\raggedright\arraybackslash}p{0.36\textwidth} p{0.56\textwidth}}
+\begin{tabular}{lrrrr}
 \toprule
-\normalfont\textbf{Ruta} & \textbf{Contenido} \\
+Métrica & Media & Desviación & Mínimo & Máximo\\
 \midrule
-src/tp2/punto1.py & Punto 1 completo (1.1 a 1.5). \\
-src/tp2/punto2.py & Punto 2 (2.1 y 2.2). \\
-src/tp2/punto3.py & Punto 3 (3.1 a 3.3). \\
-src/tp2/utils.py & Infraestructura compartida: datos, particiones, métricas,
-corridas, figuras, tablas y pruebas en el notebook. \\
-notebooks/\allowbreak tp2\_detector\_spam.ipynb & El \emph{main}: único lugar donde se
-combinan los archivos. \\
-tests/ & Un archivo de pruebas por punto, más \texttt{test\_utils.py} y la
-prueba de independencia. \\
-docs/report/ & Informe (\texttt{main.tex}, una sección por punto) y este
-documento. \\
-results/ & Figuras (PNG) y tablas (CSV) que exporta el notebook. \\
-data/raw/ & El dataset de UCI (\texttt{SMSSpamCollection}), versionado para
-que todo el equipo use el mismo archivo. \\
-TODO.md, AGENTS.md & Guía de trabajo para personas y para agentes de IA. \\
-docs/report/review.tex, review.pdf & Este documento y su PDF compilado. \\
+Tasa de aciertos & 0.9906 & 0.0016 & 0.9874 & 0.9940\\
+F1 & 0.9641 & 0.0063 & 0.9519 & 0.9776\\
 \bottomrule
 \end{tabular}
 \end{center}
+En la primera corrida la validación eligió tasa 20 y 4000 épocas, con F1
+0.9714. Es un ejemplo de selección interna, no una constante para las demás
+corridas: sus elecciones se registran en la tabla exportada de hiperparámetros.
+La mejora frente a cifras históricas no permite atribuir el cambio solo al
+codificador, porque también se corrigió el protocolo de selección.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\linewidth]{matriz-de-confusion-promedio-de-la-regresion-logistica.png}
+\caption{Errores medios de las 30 pruebas con MPNet/768, después de la
+calibración interna de cada corrida.}
+\end{figure}
+% FIN_RESULTADOS_14
 
-\subsection{Decisión: un archivo por punto}
+\section{Punto 1.5: reducción y comparación con PCA}
+Con $D=768$ se comparan $k=384$ (50\,\%), $k=192$ (25\,\%) y $k=2$ con el
+caso sin PCA. Se conserva PCA propio por SVD de datos centrados, cálculo en
+doble precisión y signo fijo de cada componente. La proyección recibe la
+media y componentes obtenidas del conjunto de ajuste correspondiente.
 
-El proyecto partió del esqueleto del TP1 (un notebook con un
-\texttt{utils.py}), pero con la implementación fuera del notebook. Primero se
-dividió en un módulo por apartado (once archivos); luego el equipo decidió
-dejar \textbf{un archivo por punto} (\texttt{punto1.py}, \texttt{punto2.py},
-\texttt{punto3.py}) más \texttt{utils.py}. Con tres personas, la asignación
-es directa: cada quien es dueño de su archivo, sus pruebas, su sección del
-notebook y su sección del informe, y los conflictos de Git quedan limitados a
-la celda del notebook que integra su parte. Se eligieron archivos
-\texttt{.py} y no un notebook por punto porque Git los fusiona sin problemas
-y Doxygen los documenta directamente.
+La calibración se repite para cada corrida y cada $k$. Durante la selección,
+el PCA se ajusta solo con el ajuste interno y transforma la validación.
+Tras elegir tasa y épocas se reajusta PCA sobre todo el entrenamiento
+externo; se entrena allí y se transforma la prueba sin reajustarlo.
+Comparar las mismas semillas permite calcular diferencias pareadas de F1.
+Las proyecciones y la varianza de todo el dataset son diagnósticos descriptivos,
+no criterios para consultar la prueba al elegir hiperparámetros.
 
-\subsection{Regla de independencia y el notebook como \emph{main}}
-
-Ningún archivo de \texttt{src/tp2/} importa a otro del paquete, ni siquiera a
-\texttt{utils.py}. Cuando un punto necesita algo de otro, el notebook se lo
-entrega como argumento: por ejemplo, las gráficas de 1.3 reciben una
-\emph{función} de probabilidad y no el modelo, y la calibración de 1.4 recibe
-la métrica \texttt{utils.f1\_score} como argumento. Así cada archivo se
-programa y se prueba por separado. La prueba
-\texttt{test\_module\_independence.py} analiza los \texttt{import} de cada
-archivo y falla si alguno rompe la regla; también falla si una dependencia
-opcional (\texttt{sentence-transformers}, \texttt{transformers},
-\texttt{peft}) se importa al inicio de un archivo en lugar de dentro de la
-función que la usa.
-
-\subsection{Contratos entre archivos}
-
+% RESULTADOS_15
+\subsection{Resultados y dimensión óptima}
+Se completaron las 90 corridas con PCA y las 30 sin PCA, con las mismas
+semillas. La varianza corresponde al PCA descriptivo sobre todo el dataset;
+las métricas usan únicamente PCA ajustados con el entrenamiento correspondiente.
 \begin{center}
-\begin{tabular}{l p{0.6\textwidth}}
+\begin{tabular}{rrrrr}
 \toprule
-\textbf{Dato} & \textbf{Formato} \\
+$k$ & Varianza & Tasa de aciertos & F1 & $\Delta$ F1 pareado\\
 \midrule
-Características & tensor \texttt{float32} de forma $(n, D)$, en el orden del
-dataset. \\
-Etiquetas y predicciones & tensor \texttt{int64} de forma $(n,)$:
-\emph{ham} $=0$, \emph{spam} $=1$. \\
-Clase positiva & spam: es la clase del F1-score y la anomalía del punto 2. \\
-Una corrida & función \texttt{run(seed) -> dict} de métricas. \\
-Figuras & cada función devuelve la figura sin mostrarla; el notebook la
-muestra y la exporta con \texttt{utils.show\_figure}. \\
+768 & 100\,\% & $0.9906\pm0.0016$ & $0.9641\pm0.0063$ & ---\\
+384 & 96.16\,\% & $0.9905\pm0.0019$ & $0.9637\pm0.0075$ & $-0.0004$\\
+192 & 84.13\,\% & $0.9894\pm0.0021$ & $0.9596\pm0.0082$ & $-0.0045$\\
+2 & 8.08\,\% & $0.9466\pm0.0054$ & $0.7845\pm0.0189$ & $-0.1796$\\
 \bottomrule
 \end{tabular}
 \end{center}
+Con 384 componentes el F1 es menor que sin PCA en 14 de las 30 particiones;
+la diferencia pareada es $-0.0004\pm0.0030$. Con 192, baja en 24 de las 30,
+con diferencia $-0.0045\pm0.0054$. Con 2 baja en todas, con diferencia
+$-0.1796\pm0.0198$: se escapan 61.4 spam por prueba frente a 11.8 sin PCA,
+y los ham marcados como spam suben de 4.0 a 27.9.
 
-\subsection{Figuras, tablas y pruebas}
-
-\begin{itemize}
-    \item \textbf{Exportación.} Cada figura mostrada con
-    \texttt{utils.show\_figure} se guarda en \texttt{results/figures/} con un
-    nombre derivado de su título, y cada tabla mostrada con
-    \texttt{utils.display\_table} se guarda en \texttt{results/tables/}. Al
-    ejecutar la celda de configuración se borran los archivos anteriores,
-    así que los resultados siempre corresponden a la última ejecución.
-    \item \textbf{Estilo de las figuras.} Azul para la clase 0 (ham) y naranja
-    para la clase 1 (spam), dos colores que también se distinguen con
-    daltonismo; cada clase lleva además su propio marcador (círculo o
-    triángulo). Ejes y cuadrícula discretos, texto en tinta neutra y un
-    subtítulo que explica cómo leer cada figura.
-    \item \textbf{Pruebas.} Se ejecutan con \texttt{pytest} y también dentro
-    del notebook con \texttt{utils.run\_tests}. Una prueba o función sin
-    terminar lanza \texttt{NotImplementedError} y se reporta como
-    \emph{pendiente}, no como fallida, para que el avance sea visible.
-\end{itemize}
-
-%-------------------------------------------------------------------------------
-\section{Protocolo experimental común}
-%-------------------------------------------------------------------------------
-
-\begin{itemize}
-    \item \textbf{Métricas.} Con $TP$, $FP$, $FN$ y $TN$ los verdaderos y
-    falsos positivos y negativos (positivo = spam):
-    \[
-        \text{tasa de aciertos} = \frac{TP+TN}{n}, \qquad
-        F_1 = \frac{2\,TP}{2\,TP + FP + FN}.
-    \]
-    Como solo el 13~\% de los mensajes es spam, un clasificador que diga
-    siempre ``ham'' tendría una tasa de aciertos cercana a 0.87 y un $F_1$
-    de 0; por eso el $F_1$ es la métrica que más informa.
-    \item \textbf{Particiones.} \texttt{utils.stratified\_split} baraja los
-    índices de cada clase por separado y toma el 70~\% de cada una para
-    entrenamiento, de modo que las dos particiones conservan la proporción de
-    spam.
-    \item \textbf{Semillas.} La corrida $k$ usa la semilla
-    \texttt{SEED} $+ k - 1$ (\texttt{SEED} $= 2026$) para la partición y para
-    la inicialización del modelo, así que todo el experimento es
-    reproducible.
-    \item \textbf{Repeticiones.} Los puntos 1.4, 1.5 y 2.2 repiten el
-    experimento en 30 particiones distintas; el punto 3.1 usa 30 muestras
-    estratificadas del 30~\% del dataset.
-\end{itemize}
-
-%-------------------------------------------------------------------------------
-\section{Punto 1: regresión logística}
-%-------------------------------------------------------------------------------
-
-\subsection{1.1 Evaluación del modelo (\texttt{forward})}
-
-El modelo es $p(y=1\mid x)=\sigma(x^\top w+b)$. \texttt{forward} calcula los
-logits $z = Xw + b$ de todas las muestras con un producto matriz-vector y les
-aplica una sigmoide propia. La forma directa $1/(1+e^{-z})$ calcula $e^{1000}$
-cuando $z=-1000$ y su gradiente con Autograd sale indefinido (NaN). Por eso
-la sigmoide se evalúa con $e^{-|z|}\in(0,1]$: $1/(1+e^{-|z|})$ si $z\ge 0$ y
-$e^{-|z|}/(1+e^{-|z|})$ si $z<0$, que son la misma función sin infinitos.
-
-\subsection{1.2 Entrenamiento (\texttt{train\_logistic\_regression})}
-
-\begin{itemize}
-    \item \textbf{Pérdida:} entropía cruzada binaria media.
-    \item \textbf{Optimización:} descenso del gradiente por lotes completos,
-    implementado a mano (sin \texttt{torch.nn} ni \texttt{torch.optim}),
-    con el gradiente exacto $\nabla_w L = X^\top(p-y)/n$ y
-    $\partial L/\partial b = \overline{p-y}$, donde $p$ se evalúa con
-    \texttt{forward}. Se prefirió la fórmula cerrada a Autograd porque es
-    exacta, transparente y no depende de que el grafo de cómputo sea
-    estable.
-    \item \textbf{Inicialización:} pesos normales con desviación 0.01
-    generados con la semilla y sesgo en cero. La misma semilla da siempre el
-    mismo modelo.
-    \item \textbf{Historial:} la pérdida inicial y la de cada época, calculada
-    como $\log(1+e^{z})-yz$ para que no se indefina si $p$ vale 0 o 1.
-    \item \textbf{Costo:} con datos del tamaño de 1.4 ($3\,900\times384$),
-    1000 épocas tardan unos 0.7 segundos en CPU.
-\end{itemize}
-
-\subsection{Pruebas unitarias de 1.1 y 1.2}
-
-Hay dos pruebas por función (\texttt{tests/test\_punto1.py}): pesos nulos dan
-probabilidad 0.5; la salida coincide con la sigmoide calculada a mano y es
-estable con logits de $\pm1000$; el primer paso de entrenamiento coincide con
-el gradiente de referencia de Autograd y la pérdida baja en cada época; y el
-modelo separa sin errores datos separables, de forma reproducible. Para
-comprobar que las pruebas sirven, se introdujeron a propósito errores en la
-implementación (sigmoide ingenua, signo invertido, sin sesgo, gradiente sin
-promediar): cada error hizo fallar al menos una prueba.
-
-\subsection{1.3 Verificación con datos sintéticos}
-
-\paragraph{Lógica.} Antes de usar los mensajes se verifica el regresor en un
-caso con respuesta conocida. La frontera verdadera es fija,
-$0.6\,x_1 + 0.8\,x_2 - 0.5 = 0$; como $(0.6, 0.8)$ es un vector unitario,
-$w^{*\top}x+b^*$ es directamente la distancia con signo a la recta. Cada punto
-se coloca a una distancia $|d| = 1 + 0.5\,|z|$ (con $z$ normal estándar) del
-lado de su clase, y a una posición normal a lo largo de la recta. Queda una
-franja vacía de ancho 2 entre las clases, de modo que los datos son
-separables por construcción.
-
-\paragraph{Decisión.} Se fijó la frontera (en lugar de sortearla) para poder
-comparar la frontera aprendida con la verdadera en tablas y figuras.
-
-\paragraph{Pasos.} 200 puntos de entrenamiento (semilla 2026) y 200 de
-prueba (semilla 2027); entrenamiento con tasa 0.1 y 1000 épocas; para
-mostrar el proceso se reentrena con 0, 10, 50 y 200 épocas, lo que reproduce
-exactamente esos estados del entrenamiento porque es determinista.
-
-\paragraph{Resultados.} El modelo recupera la frontera verdadera: tras 10 épocas
-clasifica bien todo el entrenamiento y el ángulo entre $w$ y $w^*$ baja de 26°
-(época 0) a 0.73°, y tras 1000 épocas a 0.01°; la pérdida baja de 0.681 a
-0.009 sin oscilar. En los 200 puntos de prueba la tasa de aciertos y el
-$F_1$ valen 1 (Figura~\ref{fig:review-sinteticos}). Dos detalles enseñan cómo
-aprende la regresión logística con datos separables: $\lVert w\rVert$ crece
-sin parar (de 0.02 a 3.84), porque la pérdida se puede seguir reduciendo
-haciendo más abrupta la transición de probabilidad; y el sesgo normalizado
-($-0.35$ frente a $-0.5$) avanza mucho más lento que la orientación, porque
-cualquier recta dentro de la franja vacía separa perfectamente y el descenso
-del gradiente solo se acerca muy despacio a la de margen máximo.
+Las 384 componentes conservan casi toda la varianza y un F1 medio próximo
+al del caso completo. Las 192 vuelven a reducir a la mitad el número de
+características con mayor pérdida media. Dos dimensiones sirven para
+visualizar, pero pierden información relevante para clasificar. La desviación
+entre particiones solapadas no es un intervalo de confianza de muestras
+independientes. No se atribuye significación estadística a la diferencia pequeña
+con 384 componentes.
 
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.48\textwidth]{evolucion-de-la-frontera-en-datos-sinteticos}
-    \hfill
-    \includegraphics[width=0.5\textwidth]{frontera-de-decision-sobre-los-datos-sinteticos-de-prueba}
-    \caption{Izquierda: frontera tras 0, 10, 50, 200 y 1000 épocas.
-    Derecha: probabilidad del modelo final sobre los datos de prueba.}
-    \label{fig:review-sinteticos}
+\centering
+\includegraphics[width=0.96\linewidth]{f1-score-de-la-regresion-logistica-con-y-sin-pca.png}
+\caption{F1 en las mismas 30 particiones, con validación interna por método y corrida.}
 \end{figure}
 
-\subsection{1.4 Características del codificador y 30 corridas}
+El equipo confirmó \texttt{OPTIMAL\_PCA\_DIMENSIONS = 384} el 24 de octubre
+de 2026. Se reduce a la mitad la dimensión inicial de MPNet y se conserva
+el 96.16\,\% de la varianza descriptiva. El F1 medio es 0.9637 frente a
+0.9641 sin PCA, con diferencia media pareada de $-0.0004$. Esta cercanía
+no demuestra equivalencia estadística; se adopta como compromiso entre
+reducción y clasificación observada. El punto 2 usará 384 histogramas,
+uno por componente. La decisión se basa en MPNet/768 y no en las
+recomendaciones anteriores de MiniLM/384.
+% FIN_RESULTADOS_15
 
-\paragraph{Codificador.} El equipo eligió
-\texttt{sentence-transformers/all-MiniLM-L6-v2} (19 de octubre de 2026)
-frente a BERT base y DistilBERT: produce vectores de 384 dimensiones de
-norma 1 pensados para representar oraciones completas, ocupa unos 90~MB y
-codifica los 5\,574 mensajes en CPU en poco tiempo. Las características se
-calculan una vez y se guardan en \texttt{data/processed/}, porque no dependen
-de la partición.
+\section{Puntos pendientes}
+El punto 2 mantiene sus funciones pendientes de densidad por histogramas,
+verosimilitud, umbral y gráficas; su dimensión ya está fijada en 384 a partir
+de 1.5, con un histograma por componente.
+El equipo debe confirmar qué datos construyen las densidades, el criterio del
+umbral y la cantidad de intervalos. El punto 3 conserva los textos originales
+y requiere elegir modelos, prompt y tratamiento de respuestas ambiguas.
+LoRA o DoRA siguen pendientes. Estas tareas y sus pruebas no se eliminan;
+la ejecución final de todo el cuaderno espera a que estén implementadas.
 
-\paragraph{Calibración.} Con vectores de norma 1 cada coordenada vale del
-orden de 0.05, así que el gradiente es pequeño y no hay una tasa de
-aprendizaje evidente. El equipo decidió calibrar la tasa de aprendizaje y las épocas
-con una validación: del 70~\% de entrenamiento de la primera partición se
-separa un 20~\% estratificado, se entrena cada combinación de la cuadrícula
-(tasas 0.1 a 50, de 250 a 4000 épocas) con el 80~\% restante y se elige la
-de mayor $F_1$ en la validación. El $F_1$ de una validación con 105 spam cambia
-a saltos y muchas combinaciones empatan, así que el empate se resuelve con la
-menor entropía cruzada en la validación. Resultado: tasa 10 y 2000 épocas
-($F_1 = 0.961$). Se observa que lo que cuenta es el producto
-tasa~$\times$~épocas ($10\times2000$, $5\times4000$ y $20\times1000$ dan lo
-mismo), que con poco entrenamiento el modelo casi no aprende (con tasa 0.1 y
-250 o 500 épocas responde siempre ham y el $F_1$ es 0; con 1000 épocas,
-0.174) y que con demasiado (tasa 50 y 4000 épocas) la pérdida de validación
-sube y el $F_1$ baja a 0.951: un sobreajuste leve
-(Figura~\ref{fig:review-calibracion}).
-
-\paragraph{Independencia de 1.3.} El apartado 1.4 no usa nada de 1.3: ni sus
-datos, ni su modelo, ni sus hiperparámetros, y su análisis no se apoya en
-él. Las celdas de 1.4 y 1.5 se pueden ejecutar saltándose las de 1.3. Antes
-la calibración se justificaba con ``la tasa 0.1 de 1.3 aprende muy despacio''
-y con un $F_1$ de 0.23 de una ejecución preliminar que el notebook no
-reproducía; ahora la tasa 0.1 forma parte de la cuadrícula y ese
-comportamiento sale de la propia calibración.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{calibracion-de-la-regresion-logistica-sobre-los-embeddings}
-    \caption{$F_1$ en validación de cada combinación; el recuadro blanco es
-    la elegida.}
-    \label{fig:review-calibracion}
-\end{figure}
-
-\paragraph{Resultados de las 30 corridas.} Tasa de aciertos $0.988\pm0.002$ (entre 0.984 y
-0.992) y $F_1$ $0.953\pm0.008$ (entre 0.939 y 0.968): la dispersión es
-pequeña, así que el resultado no depende de la partición. En promedio, de
-1\,448 ham de prueba solo 6.2 se marcan como spam (0.4~\%) y de 224 spam se
-escapan 14.6 (6.5~\%): precisión 0.971 y exhaustividad 0.935
-(Figura~\ref{fig:review-confusion}). Los errores son sobre todo spam que pasa,
-el lado preferible para un filtro. Un clasificador que dijera siempre ``ham''
-tendría 0.866 de aciertos y $F_1=0$.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\textwidth]{matriz-de-confusion-promedio-de-la-regresion-logistica}
-    \caption{Matriz de confusión promedio de las 30 corridas.}
-    \label{fig:review-confusion}
-\end{figure}
-
-\paragraph{Limitación.} La calibración usa datos de la primera partición, que
-en otras corridas pueden caer en la prueba. Solo se eligieron dos números con
-ellos, así que el sesgo optimista es pequeño, pero existe.
-
-\subsection{1.5 PCA}
-
-\paragraph{Lógica.} \texttt{fit\_pca} centra los datos y toma las
-componentes de la SVD de la matriz centrada (\texttt{torch.linalg.svd}): las
-filas de $V^\top$ son las direcciones de máxima varianza y la varianza de la
-componente $j$ es $\sigma_j^2/(n-1)$. Se calcula en doble precisión y el
-signo de cada componente se fija (coordenada de mayor valor absoluto
-positiva), porque la SVD lo deja arbitrario y las figuras cambiarían entre
-máquinas. \texttt{transform\_pca} resta la media del ajuste, no la de los
-datos que recibe, así la prueba se proyecta con lo aprendido del
-entrenamiento.
-
-\paragraph{Figuras.} Con 2 dimensiones se grafican todos los mensajes. Con 96
-y 192 no se pueden dibujar todas las dimensiones como puntos, y las dos
-primeras componentes son las mismas en los tres casos (las componentes de un
-PCA están anidadas), así que repetir el mismo plano no diría nada nuevo. Se
-eligió una figura de dos paneles: los mensajes sobre las dos primeras
-componentes y, para cada una de las $k$ componentes, la separación entre
-clases $|d|$ de Cohen (diferencia de medias entre desviación estándar
-combinada). Así la figura de cada caso muestra todas sus dimensiones.
-
-\paragraph{Calibración por dimensión.} Con la tasa 10 y 2000 épocas de 1.4,
-una revisión en la validación (no en la prueba) mostró que con 96
-componentes el modelo seguía mejorando al entrenar más ($F_1$ en validación
-de 0.947 con 2000 épocas y 0.952 con 8000). Para que la comparación sea
-justa, cada $k$ se calibra con la misma cuadrícula y la misma validación de
-1.4, ajustando el PCA solo con la parte de ajuste: 192 componentes, tasa 50
-y 250 épocas; 96, tasa 50 y 500 épocas; 2, tasa 2 y 500 épocas. La tasa 50
-está en el borde de la cuadrícula. Con los valores de 1.4 los resultados de
-prueba eran casi los mismos ($F_1$ de 0.949, 0.934 y 0.755 en una ejecución
-del 23/10/2026), así que la calibración no cambia las conclusiones.
-
-\paragraph{Resultados.} La varianza está muy repartida: la primera
-componente explica el 4.5~\%; 2, 96 y 192 componentes conservan el 7.5~\%,
-67.6~\% y 87.8~\%. La primera componente es la que más separa las clases
-($|d|=2.68$; el 82~\% del spam y el 6~\% del ham tienen una coordenada mayor
-que 0.2); le siguen la 4 (0.67) y la 9 (0.57), y solo 7 componentes superan
-0.3, todas entre las 20 primeras.
-
-\begin{center}
-\small
-\begin{tabular}{lcccc}
-\toprule
-Dimensiones & Tasa de aciertos & $F_1$ & $\Delta F_1$ en la misma partición & Corridas con $F_1$ menor \\
-\midrule
-384 (sin PCA) & $0.988\pm0.002$ & $0.953\pm0.008$ & --- & --- \\
-192 & $0.986\pm0.002$ & $0.945\pm0.010$ & $-0.008\pm0.006$ & 27 de 30 \\
-96  & $0.983\pm0.003$ & $0.934\pm0.010$ & $-0.019\pm0.008$ & 30 de 30 \\
-2   & $0.940\pm0.004$ & $0.750\pm0.020$ & $-0.203\pm0.019$ & 30 de 30 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Ninguna reducción es gratis. Con 192 la pérdida es menor que la variación
-del $F_1$ entre particiones y casi todo es spam que se escapa (17.5 por
-corrida frente a 14.6); con 96 también suben las falsas alarmas (10.8 frente
-a 6.2); con 2 se escapa un tercio del spam (74.7 de 224).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{proyeccion-pca-del-dataset-50-de-d}
-    \caption{Mensajes sobre las dos primeras componentes y separación entre
-    clases en cada una de las 192 componentes.}
-    \label{fig:review-pca}
-\end{figure}
-
-\paragraph{Pendiente: $D$ óptima.} Es decisión del equipo y la usa el punto
-2. Opciones: 192 (la que menos pierde), 96 (pierde un poco más, pero la mitad
-de histogramas en el punto 2) o explorar valores intermedios o menores. 2
-queda descartada.
-
-%-------------------------------------------------------------------------------
-\section{Punto 2: detección de anomalías (pendiente)}
-%-------------------------------------------------------------------------------
-
-Diseño previsto: cada dimensión del PCA óptimo se modela con un histograma
-$p_d$; el puntaje de un mensaje es $\sum_d \log p_d(x_d)$ y un puntaje menor
-que el umbral marca spam. De forma provisional, el notebook construye las
-densidades solo con los mensajes ham del entrenamiento, que representan la
-distribución ``normal''; esta decisión y el criterio del umbral siguen
-pendientes del equipo.
-
-%-------------------------------------------------------------------------------
-\section{Punto 3: modelos de lenguaje (pendiente)}
-%-------------------------------------------------------------------------------
-
-Diseño previsto: con un modelo fijo y decodificación determinista, la
-predicción de un mensaje no depende de la muestra, así que cada mensaje se
-clasifica una sola vez por modelo y las 30 muestras del 30~\% reutilizan esas
-predicciones. El resultado es el mismo que clasificar cada muestra, con 30
-veces menos inferencias. Faltan por decidir los modelos, el prompt y el
-tratamiento de respuestas ambiguas.
-
-%-------------------------------------------------------------------------------
+\newpage
 \section{Registro de decisiones}
-%-------------------------------------------------------------------------------
-
-{\small
-\begin{longtable}{p{0.13\textwidth} p{0.32\textwidth} p{0.45\textwidth}}
+\small
+\begin{longtable}{p{0.14\linewidth}p{0.38\linewidth}p{0.39\linewidth}}
 \toprule
-\textbf{Fecha} & \textbf{Decisión} & \textbf{Motivo} \\
-\midrule
-\endfirsthead
-\toprule
-\textbf{Fecha} & \textbf{Decisión} & \textbf{Motivo} \\
-\midrule
-\endhead
-17/10/2026 & Implementación en archivos \texttt{.py} y notebook como
-\emph{main}. & Git fusiona \texttt{.py} sin problemas; varias personas
-trabajan en paralelo. \\
-17/10/2026 & Un archivo por punto más \texttt{utils.py}. & Asignación directa
-entre tres personas (decisión del equipo). \\
-17/10/2026 & Ningún archivo importa a otro. & Cada punto se programa y prueba
-por separado; una prueba lo verifica. \\
-17/10/2026 & \texttt{TODO.md} para personas y \texttt{AGENTS.md} para
-agentes, siempre actualizados juntos. & Pedido del equipo. \\
-17/10/2026 & Sigmoide estable y descenso del gradiente con gradiente exacto
-(1.1 y 1.2). & Implementación propia, sin NaN con logits grandes. \\
-19/10/2026 & Frontera verdadera fija en 1.3. & Permite comparar la frontera
-aprendida con la verdadera. \\
-19/10/2026 & Codificador \texttt{all-MiniLM-L6-v2} (1.4). & Decisión del
-equipo: buena representación de oraciones y rápido en CPU. \\
-19/10/2026 & Calibración por $F_1$ en una validación del entrenamiento
-(1.4). & Decisión del equipo: con vectores de norma 1 no hay una tasa de
-aprendizaje evidente. \\
-23/10/2026 & El apartado 1.3 queda independiente: 1.4 y 1.5 solo usan el
-dataset de UCI, y la tasa 0.1 entra en la cuadrícula de calibración de 1.4.
-& Pedido del equipo. El análisis de 1.4 citaba la tasa de 1.3 y un $F_1$ de
-una ejecución preliminar que el notebook no reproducía. \\
-23/10/2026 & El dataset de UCI se versiona en
-\texttt{data/raw/SMSSpamCollection}. & Pedido del equipo: que todos tengan el
-mismo archivo sin depender de la descarga. Licencia CC BY 4.0, con la cita en
-\texttt{data/README.md}. \\
-23/10/2026 & Ningún asistente de IA figura como autor, coautor ni ayudante
-en el repositorio (commits, pull requests, código, notebook ni informe). &
-Pedido del equipo: los autores son las personas del equipo. \\
-23/10/2026 & \texttt{build\_pdf.sh} con permiso de ejecución en Git. & En
-Linux y macOS \texttt{./build\_pdf.sh} daba ``Permission denied''. \\
-23/10/2026 & PCA con la SVD de los datos centrados, en doble precisión y con
-el signo de cada componente fijo (1.5). & Implementación propia y
-transparente; el signo fijo hace las figuras iguales en cualquier máquina. \\
-23/10/2026 & Con 96 y 192 componentes, la figura muestra el plano de las dos
-primeras y la separación entre clases de cada componente (1.5). & El plano
-de las dos primeras es igual en los tres casos; el segundo panel muestra
-todas las dimensiones de cada caso. \\
-23/10/2026 & Tasa y épocas calibradas para cada cantidad de componentes con
-la validación de 1.4 (1.5). & Con 96 componentes, la tasa y las épocas de 1.4
-se quedaban cortas en la validación; así cada $k$ se compara en igualdad de
-condiciones. \\
-23/10/2026 & Comparación de cada reducción con la regresión sin PCA en la
-misma partición (1.5). & Todas usan las mismas 30 particiones; la diferencia
-pareada muestra que incluso con 192 el $F_1$ baja en 27 de 30 corridas. \\
-19/10/2026 & Empates de la calibración resueltos con la entropía cruzada en
-validación (1.4). & Con 105 spam el $F_1$ empata en muchas combinaciones; el
-primer criterio (menos épocas) elegía el borde de la cuadrícula (tasa 50). \\
-19/10/2026 & Tasa 10 y 2000 épocas (1.4). & Resultado de la calibración. \\
-19/10/2026 & Cada corrida guarda su matriz de confusión (1.4). & Muestra qué
-tipo de error comete el modelo, no solo cuántos. \\
-19/10/2026 & Este documento se versiona como \texttt{.tex} y como PDF, y se
-actualiza en cada cambio junto con \texttt{TODO.md} y \texttt{AGENTS.md}. &
-Pedido del equipo: tener siempre a mano una versión legible y al día. \\
-19/10/2026 & LaTeX con MiKTeX en Windows y \texttt{./build\_pdf.sh review}
-para compilar este documento. & No había LaTeX instalado; MiKTeX instala los
-paquetes que faltan al compilar. \\
-19/10/2026 & \texttt{build\_pdf.sh} le pasa a BibTeX la carpeta del informe
-en formato de Windows. & Desde Git Bash, MiKTeX no entendía la ruta y usaba
-otro \texttt{references.bib} de sus paquetes: ninguna cita se resolvía. \\
-19/10/2026 & Informe con \texttt{lmodern}, \texttt{microtype} y cortes después
-de los guiones bajos. & Fuentes vectoriales y ningún nombre de función fuera
-del margen. \\
+\textbf{Fecha} & \textbf{Decisión} & \textbf{Motivo}\\
+\midrule\endhead
+17/10/2026 & Sigmoide estable y gradiente exacto propio. & Implementación
+transparente sin desbordamientos ni optimizadores externos.\\
+19/10/2026 & Frontera verdadera fija en 1.3. & Comparar la recta aprendida
+con una referencia con sesgo.\\
+23/10/2026 & 1.3 independiente de UCI; dataset original versionado. & Evitar
+mezclar demostración sintética y evaluación real; compartir los mismos datos.\\
+23/10/2026 & PCA por SVD centrada y comparación pareada. & Ajuste propio y
+comparación sobre las mismas particiones.\\
+24/10/2026 & Único notebook con toda la implementación. & Sustituye archivos
+por punto y utilidades separadas; pruebas consumen las mismas definiciones.\\
+24/10/2026 & Mantener logística $Xw+b$ seguida de sigmoide. & Confirmación del
+equipo; coincide con 1.1 y 1.2 del enunciado.\\
+24/10/2026 & MPNet con 768 características; descargar y ejecutar 1.4--1.5. &
+Confirmación del equipo; reemplaza MiniLM/384 y sus resultados.\\
+24/10/2026 & Calibración interna por corrida y cantidad de componentes. &
+Aislar cada prueba y usar el ganador automáticamente.\\
+24/10/2026 & Conservar duplicados y documentar su limitación. & Mantener el
+dataset original y el protocolo por filas sin introducir otra evaluación.\\
+24/10/2026 & Fijar $D=384$ para el punto 2. & Decisión del equipo: mitad de
+las características, 96.16\,\% de varianza descriptiva y F1 medio 0.9637
+frente a 0.9641 sin PCA; no implica equivalencia estadística.\\
 \bottomrule
 \end{longtable}
-}
+\normalsize
 
-%-------------------------------------------------------------------------------
-\section{Verificación y cómo reproducir}
-%-------------------------------------------------------------------------------
-
+\section{Verificación y reproducción}
+% VERIFICACION_ACTUAL
 \begin{itemize}
-    \item \texttt{pytest}: 26 pruebas superadas, 2 pendientes (2.1 y 3.1)
-y 0 fallidas. Además de las cuatro obligatorias de 1.1 y 1.2, hay pruebas del
-generador sintético (formas, balance, margen y reproducibilidad), de las
-gráficas, de \texttt{extract\_features} con un codificador falso (sin
-descargar modelos), de la búsqueda de hiperparámetros y del PCA (dirección
-dominante, proyección centrada y sin correlación con la varianza explicada
-en la diagonal, y gráficas).
-    \item Las secciones 1.3 y 1.4 del notebook se ejecutaron de principio a
-    fin en Windows y de nuevo el 23/10/2026 en Linux, junto con la 1.5, con Python 3.14,
-    PyTorch 2.14 y sentence-transformers 6.1.0; las figuras y tablas de este
-    documento salen de la ejecución en Linux. Ambas dan las mismas métricas
-    (las tablas solo difieren en el octavo decimal).
-    \item Este documento se compiló con MiKTeX y \texttt{latexmk}
-    (\texttt{./build\_pdf.sh review}) y, el 23/10/2026, con TeX Live en Linux
-    (\texttt{sh build\_pdf.sh review}). El informe completo
-    (\texttt{main.tex}) también compila: 12 páginas, sin citas sin resolver ni
-    líneas fuera del margen. Todavía no se ha generado la documentación
-    Doxygen, que no está instalada.
+\item \texttt{pytest}: 30 pruebas superadas, 2 pendientes (2.1 y 3.1), 0
+fallidas, en terminal y cuaderno. Incluye búsqueda vectorizada equivalente
+al entrenamiento individual, aislamiento de prueba, PCA interno y rechazo
+de cachés incompatibles.
+\item Cuaderno guardado validado con \texttt{nbformat}, IDs únicos y análisis
+sintáctico. Se conservan documentación Doxygen, sesgo y gradiente.
+\item Dataset contrastado con el original UCI. Características MPNet
+$(5574,768)$, finitas, \texttt{float32} y de norma 1. Las cuatro variantes
+completaron 30 corridas con semillas 2026--2055. Toda la evaluación UCI se
+completó antes de crear los datos sintéticos de 1.3.
+\item La inspección estática del IDE no resuelve algunos imports de pruebas
+y atributos del módulo cargado dinámicamente; su ejecución real y las pruebas
+los verifican. El informe preliminar también compila (17 páginas), con los
+puntos 2 y 3 todavía pendientes.
+\item Figuras inspeccionadas visualmente y PDF compilado con
+\texttt{./build\_pdf.sh review}. La ejecución final y Doxygen siguen pendientes,
+al igual que los puntos 2 y 3.
 \end{itemize}
+% FIN_VERIFICACION_ACTUAL
 
-Para reproducir: instalar \texttt{requirements.txt}, abrir
-\texttt{notebooks/tp2\_detector\_spam.ipynb} y ejecutar las celdas en orden.
-El dataset ya está en \texttt{data/raw/}; la primera ejecución descarga el
-codificador y guarda las características en \texttt{data/processed/}. Ejecutar la celda de
-configuración borra las figuras y tablas de \texttt{results/}, así que este
-documento se debe recompilar después de ejecutar las secciones que generan
-las figuras que muestra.
+Para reproducir, instalar \texttt{requirements.txt} y ejecutar las definiciones,
+configuración, datos y punto 1 completos del cuaderno. La configuración limpia
+las exportaciones: regenerar las figuras antes de compilar documentos que las usen.
 
 \end{document}
