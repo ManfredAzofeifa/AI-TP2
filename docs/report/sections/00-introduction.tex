@@ -15,14 +15,12 @@ enfoques implementados en PyTorch \cite{paszke2019pytorch}:
     \item clasificación con modelos grandes de lenguaje.
 \end{enumerate}
 
-La implementación se organiza en un archivo independiente por punto del
-enunciado (\texttt{punto1.py}, \texttt{punto2.py} y \texttt{punto3.py}, en
-\texttt{src/tp2/}) más un archivo de utilidades compartidas
-(\texttt{utils.py}), que el notebook principal
-\texttt{tp2\_detector\_spam.ipynb} integra. Todos los números, tablas y
-figuras de este informe provienen de una ejecución completa del notebook
-desde un kernel limpio; las figuras se exportan automáticamente durante esa
-ejecución.
+La implementación completa vive en el notebook
+\texttt{tp2\_detector\_spam.ipynb}, organizado en celdas de definiciones,
+configuración, experimentos y análisis. Las pruebas externas cargan las
+mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
+figuras y tablas provienen de la ejecución completa de sus secciones; los
+puntos 2 y 3 siguen pendientes de implementación.
 
 \subsection{Protocolo común}
 
@@ -34,11 +32,14 @@ ejecución.
     entrenamiento y 30~\% de prueba, una por semilla.
     \item \textbf{Muestreo de los modelos de lenguaje.} 30 muestras
     estratificadas del 30~\% del dataset.
-    \item \textbf{Codificador.} \texttt{sentence-transformers/all-MiniLM-L6-v2},
-    con vectores de 384 dimensiones (Sección~\ref{sec:caracteristicas}).
+    \item \textbf{Codificador.} \texttt{sentence-transformers/all-mpnet-base-v2},
+    con vectores de 768 dimensiones (Sección~\ref{sec:caracteristicas}).
     \item \textbf{Hiperparámetros de la regresión logística.} Calibrados por
-    F1 en una validación tomada solo del entrenamiento
+    F1 en una validación interna de cada corrida, tomada solo de su entrenamiento
     (Sección~\ref{sec:calibracion}).
-    \item TODO: decisiones pendientes del equipo ($D$ óptima, umbral y
+    \item \textbf{Dimensión para el detector de anomalías.} El equipo confirmó
+    $D=384$ el 24 de octubre de 2026, la mitad de las 768 características;
+    se utilizarán 384 histogramas, uno por componente (Sección~\ref{sec:punto2}).
+    \item TODO: decisiones pendientes del equipo (umbral y
     modelos de lenguaje).
 \end{itemize}

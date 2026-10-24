@@ -14,7 +14,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from tp2 import punto1
+from notebook_loader import notebook as punto1
 
 
 def _noisy_dataset():
@@ -291,6 +291,8 @@ def test_components_for_fraction():
     """
     assert punto1.components_for_fraction(384, 0.5) == 192
     assert punto1.components_for_fraction(384, 0.25) == 96
+    assert punto1.components_for_fraction(768, 0.5) == 384
+    assert punto1.components_for_fraction(768, 0.25) == 192
     assert punto1.components_for_fraction(3, 0.1) == 1
 
 

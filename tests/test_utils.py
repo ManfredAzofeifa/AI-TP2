@@ -9,7 +9,7 @@ from pathlib import Path
 
 import torch
 
-from tp2 import utils
+from notebook_loader import notebook as utils
 
 TARGETS = torch.tensor([0] * 80 + [1] * 20)
 

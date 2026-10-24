@@ -1,7 +1,7 @@
 \section{Aprendizaje supervisado: regresión logística}
 \label{sec:punto1}
 
-% Punto 1 (60 puntos). Archivo: src/tp2/punto1.py. Pruebas: tests/test_punto1.py.
+% Punto 1 (60 puntos). Implementación: notebooks/tp2_detector_spam.ipynb. Pruebas: tests/test_punto1.py.
 
 \subsection{Evaluación del modelo}
 
@@ -148,67 +148,78 @@ orientación converge mucho antes que la posición.
 \subsection{Extracción de características y clasificación}
 \label{sec:caracteristicas}
 
-\paragraph{Codificador.} Cada mensaje, sin preprocesar, se convierte en un
-vector con \texttt{all-MiniLM-L6-v2}, un modelo de la biblioteca
-sentence-transformers \cite{reimers2019sentence} basado en MiniLM
-\cite{wang2020minilm} y entrenado para que oraciones de significado parecido
-queden cerca. Produce vectores de $D=384$ dimensiones con norma 1. Se eligió
-frente a BERT base y DistilBERT porque está pensado para representar
-oraciones completas y codifica los 5\,574 mensajes en CPU en poco tiempo. Las
-características se calculan una sola vez y se guardan, porque no dependen de
-la partición.
+\paragraph{Codificador y datos.} El archivo SMSSpamCollection de UCI
+contiene etiquetas y textos originales; sus columnas no son las dimensiones
+de entrada del clasificador. Cada mensaje se convierte en un embedding de
+$D=768$ dimensiones con \texttt{all-mpnet-base-v2}, de
+sentence-transformers \cite{reimers2019sentence}. Se fija la revisión
+\texttt{e8c3b32edf5434bc2275fc9bab85f82640a19130} del
+modelo\footnote{\url{https://huggingface.co/sentence-transformers/all-mpnet-base-v2}}.
+La ejecución produjo una matriz de forma $(5\,574,768)$, en
+\texttt{float32}, con vectores de norma 1 y sin valores no finitos.
 
-\paragraph{Calibración.}
+El codificador está preentrenado y no se ajusta con los mensajes de este
+dataset, por lo que las características se calculan una sola vez. La caché
+registra el identificador y la revisión del modelo, la dimensión y un hash
+SHA-256 de los textos ordenados. Antes de reutilizarla se comprueban esos
+metadatos, la forma y el tipo del tensor; una caché de MiniLM o de otros
+textos no se acepta. Los datos sintéticos, el modelo y los hiperparámetros
+del apartado 1.3 no participan en este experimento ni en el apartado 1.5.
+
+\paragraph{Calibración interna por corrida.}
 \label{sec:calibracion}
-Con vectores de norma 1, cada coordenada vale del orden de
-$1/\sqrt{384}\approx0.05$ y el gradiente es pequeño, así que no hay una
-tasa de aprendizaje evidente. Para elegir $\alpha$ y las épocas sin usar la
-prueba, se tomó el
-70~\% de entrenamiento de la primera partición y se separó de él un 20~\%
-estratificado como validación (781 mensajes, 105 de ellos spam). Con el 80~\%
-restante se entrenó cada combinación de
-$\alpha\in\{0.1,0.5,1,2,5,10,20,50\}$ y $\{250,500,1000,2000,4000\}$ épocas, y
-se eligió la de mayor F1 en la validación. Como el F1 de una validación con
-105 spam cambia a saltos, varias combinaciones empatan; el empate se resolvió
-con la menor entropía cruzada en la validación
-(Figura~\ref{fig:calibracion}).
+Se realizan 30 particiones estratificadas, con semillas de 2026 a 2055. En
+cada partición, el 70~\% se destina a entrenamiento y el 30~\% a prueba;
+del entrenamiento se reserva un 20~\% estratificado para validación interna
+y el resto ajusta los candidatos. La cuadrícula conserva todas las
+combinaciones de $\alpha\in\{0.1,0.5,1,2,5,10,20,50\}$ y
+$\{250,500,1000,2000,4000\}$ épocas. Se selecciona automáticamente el mayor
+F1 en validación y, entre empates, la menor entropía cruzada de validación.
+Con la combinación elegida se vuelve a entrenar sobre todo el 70~\% y
+solo entonces se evalúa el 30~\% de prueba.
+
+Cada corrida vuelve a calibrar: la selección de la primera partición no se
+reutiliza en las siguientes. De este modo, un mensaje reservado para prueba
+en una corrida no interviene en la calibración de esa misma corrida. La
+implementación entrena las tasas en paralelo y evalúa las épocas como
+checkpoints de sus trayectorias, con la misma inicialización para todos los
+candidatos; conserva las actualizaciones propias del descenso del gradiente.
+Una prueba contrasta la cuadrícula vectorizada con entrenamientos
+independientes.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{calibracion-de-la-regresion-logistica-sobre-los-embeddings}
-    \caption{F1 en la validación para cada combinación de tasa de
-    aprendizaje y épocas.}
+    \caption{F1 en la validación interna de la primera corrida. Las demás
+    corridas realizan su propia calibración.}
     \label{fig:calibracion}
 \end{figure}
 
-Con tasas pequeñas el modelo casi no aprende: con $\alpha=0.1$ y 250 o 500
-épocas ninguna probabilidad llega a 0.5, el modelo responde siempre ham y el
-F1 es 0; con 1000 épocas detecta solo 10 de los 105 spam (F1 de 0.174). Lo
-que importa es el producto $\alpha\times$épocas: $10\times2000$,
-$5\times4000$ y $20\times1000$ (todas 20\,000) dan el mismo F1 de validación
-(0.961) y casi la misma pérdida (0.0463). Con demasiado entrenamiento
-($50\times4000$) la pérdida de ajuste
-sigue bajando (0.004), pero la de validación sube (0.059) y el F1 baja a
-0.951, una señal leve de sobreajuste. Se eligieron $\alpha=10$ y 2000 épocas.
+En la primera corrida, la validación eligió $\alpha=20$ y 4000 épocas,
+con F1 de 0.9714. Las 30 selecciones no fueron iguales: las tasas 10, 20 y
+50 aparecieron en 6, 10 y 14 corridas, respectivamente; las épocas variaron
+entre 500 y 4000. En 15 corridas se seleccionó el máximo de 4000 épocas y en
+14 la tasa máxima de 50, por lo que la cuadrícula no demuestra que se haya
+alcanzado un óptimo fuera de sus límites.
 
-\paragraph{Resultados de las 30 corridas.} Cada corrida usa una partición
-estratificada 70/30 distinta, entrena con los valores calibrados y evalúa en
-su prueba de 1\,672 mensajes (1\,448 ham y 224 spam). La
-Tabla~\ref{tab:resultados-rl} resume las métricas y la
-Figura~\ref{fig:resultados-rl} muestra cada corrida y la matriz de confusión
-promedio.
+\paragraph{Resultados de las 30 corridas.} La prueba de cada partición
+contiene 1\,672 mensajes: 1\,448 ham y 224 spam. Se conserva el umbral de
+probabilidad 0.5 y se registran la tasa de aciertos, el F1 de spam y los
+conteos de la matriz de confusión. La Tabla~\ref{tab:resultados-rl} resume
+las métricas y la Figura~\ref{fig:resultados-rl} muestra su dispersión y los
+errores medios.
 
 \begin{table}[H]
     \centering
-    \caption{Regresión logística sobre las características del codificador
-    (30 corridas).}
+    \caption{Regresión logística sobre MPNet de 768 dimensiones: 30 corridas
+    con calibración interna en cada partición.}
     \label{tab:resultados-rl}
     \begin{tabular}{lcccc}
         \toprule
         Métrica & Media & Desviación & Mínimo & Máximo \\
         \midrule
-        Tasa de aciertos & 0.9876 & 0.0022 & 0.9839 & 0.9916 \\
-        F1-score         & 0.9528 & 0.0084 & 0.9388 & 0.9683 \\
+        Tasa de aciertos & 0.9906 & 0.0016 & 0.9874 & 0.9940 \\
+        F1-score & 0.9641 & 0.0063 & 0.9519 & 0.9776 \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -224,96 +235,83 @@ promedio.
         \includegraphics[width=\linewidth]{matriz-de-confusion-promedio-de-la-regresion-logistica}
         \caption{Matriz de confusión promedio.}
     \end{subfigure}
-    \caption{Resultados de la regresión logística en las 30 corridas.}
+    \caption{Resultados de la regresión logística con MPNet en las 30 corridas.}
     \label{fig:resultados-rl}
 \end{figure}
 
-La dispersión entre corridas es pequeña, así que el resultado no depende de
-una partición afortunada. El F1 varía más que la tasa de aciertos porque solo
-depende de los 224 spam de cada prueba: cada spam mal clasificado lo mueve
-unas 0.0025. En promedio, de los 1\,448 ham solo 6.2 se marcan como spam
-(0.4~\%), mientras que de los 224 spam se escapan 14.6 (6.5~\%): precisión
-0.971 y exhaustividad 0.935. Casi todos los errores son spam que el modelo
-deja pasar, el lado preferible para un filtro, porque perder un mensaje real
-es peor que recibir un spam; bajar el umbral de 0.5 detectaría más spam a
-costa de más falsas alarmas. Como referencia, un clasificador que respondiera
-siempre ``ham'' tendría una tasa de aciertos de 0.866 y un F1 de 0.
+La tasa de aciertos fue $0.9906\pm0.0016$ y el F1 de spam,
+$0.9641\pm0.0063$. El F1 varió entre 0.9519 y 0.9776. Las diferencias
+entre particiones muestran una dispersión acotada en este dataset, aunque
+no implican independencia estadística de las corridas. Como referencia, un
+clasificador que predijera siempre ham tendría una tasa de aciertos de
+$1448/1672\simeq0.8660$ y F1 de spam igual a cero. El resultado mejora
+ambas métricas y el F1 permite valorar la clase minoritaria. En promedio,
+se marcaron 4.0 ham como spam y se dejaron pasar
+11.8 spam por corrida.
 
-Una limitación: la calibración usa datos de la primera partición que en otras
-corridas pueden caer en la prueba. Solo se eligieron dos números con ellos,
-así que el sesgo optimista es pequeño, pero existe.
+\paragraph{Límites de la evaluación.} Las 30 particiones reutilizan mensajes
+del mismo dataset; su desviación describe la variación entre particiones y
+no es un intervalo de confianza de 30 muestras independientes. Además, la
+partición se hace por filas, sin agrupar los textos duplicados que existen
+en el archivo original. Por eso copias del mismo mensaje pueden aparecer en
+entrenamiento y prueba, con una posible sobreestimación del desempeño sobre
+mensajes nuevos. El dataset se conserva sin modificar; no se cuantifica el
+tamaño de ese posible sesgo con esta evaluación.
 
 \subsection{Reducción de dimensionalidad con PCA}
 \label{sec:pca}
 
-\paragraph{Método.} El análisis de componentes principales busca las
-direcciones de máxima varianza de los datos. Con la matriz de
-características centrada, $X_c = X - \mathbf{1}\mu^\top$, y su descomposición
-en valores singulares $X_c = U\Sigma V^\top$, las columnas de $V$ son las
-componentes principales y la varianza de la componente $j$ es
-$\sigma_j^2/(n-1)$. Reducir a $k$ dimensiones es proyectar sobre las $k$
-primeras: $Z = (X-\mathbf{1}\mu^\top)V_k$. La implementación usa
-\texttt{torch.linalg.svd} y calcula en doble precisión. El signo de cada
-componente es arbitrario en la SVD; se fija para que su coordenada de mayor
-valor absoluto sea positiva, de modo que el resultado sea el mismo en
-cualquier máquina. Se reduce de $D=384$ a 192 (50~\%), 96 (25~\%) y 2
-dimensiones. En cada corrida el PCA se ajusta solo con el entrenamiento y se
-aplica a la prueba con la media del entrenamiento; para graficar todo el
-conjunto de datos se ajusta un PCA sobre todos los mensajes.
+\paragraph{Método.} Con la matriz centrada
+$X_c=X-\mathbf{1}\mu^\top$ y su descomposición en valores singulares
+$X_c=U\Sigma V^\top$, las columnas de $V$ son las componentes principales
+y la varianza de la componente $j$ es $\sigma_j^2/(n-1)$. La proyección
+conserva las $k$ primeras: $Z=(X-\mathbf{1}\mu^\top)V_k$.
+La implementación calcula la SVD en doble precisión con
+\texttt{torch.linalg.svd} y fija el signo de cada componente haciendo
+positiva su coordenada de mayor valor absoluto. Esto elimina la ambigüedad
+de signo, aunque no garantiza identidad numérica entre todas las plataformas.
+Desde $D=768$ se conservan 384 componentes (50~\%), 192 (25~\%) y 2.
 
-\paragraph{Calibración por dimensión.} La tasa de aprendizaje y las épocas de
-la Sección~\ref{sec:calibracion} se eligieron con 384 dimensiones; con otra
-dimensión cambia la escala del problema. Por eso cada $k$ se calibró con la
-misma cuadrícula y la misma validación, ajustando el PCA solo con la parte de
-ajuste (Tabla~\ref{tab:calibracion-pca}). Con 192 y 96 componentes se eligió
-la tasa 50, que está en el borde de la cuadrícula.
+\paragraph{Calibración y evaluación por dimensión.} Cada valor de $k$ y
+cada corrida tienen su propia selección de tasa y épocas, con la misma
+cuadrícula y las mismas particiones internas que el caso sin PCA. Durante
+la calibración, PCA se ajusta exclusivamente con la parte interna de ajuste,
+sin la validación. Elegidos los hiperparámetros, se ajusta de nuevo con todo
+el 70~\% de entrenamiento y se aplica a la prueba restando esa misma media.
+Los distintos valores de $k$ reutilizan las primeras componentes del mismo
+ajuste completo, sin mezclar índices de entrenamiento de otras particiones.
+Todas las variantes usan las mismas 30 particiones, por lo que las
+diferencias de F1 se comparan corrida a corrida.
 
-\begin{table}[H]
-    \centering
-    \caption{Calibración de la regresión logística para cada reducción.}
-    \label{tab:calibracion-pca}
-    \begin{tabular}{lcccc}
-        \toprule
-        Reducción & $k$ & $\alpha$ & Épocas & F1 en validación \\
-        \midrule
-        50~\% de $D$ & 192 & 50 & 250 & 0.9615 \\
-        25~\% de $D$ & 96  & 50 & 500 & 0.9569 \\
-        2 dimensiones & 2  & 2  & 500 & 0.8000 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
+\paragraph{Varianza y visualización.} Para las figuras se ajusta un PCA
+sobre todos los mensajes, exclusivamente descriptivo: ese modelo no se usa
+para entrenar ni evaluar la clasificación. La Figura~\ref{fig:pca-varianza}
+muestra la varianza individual y acumulada.
 
-\paragraph{Varianza explicada.} La varianza de los embeddings está muy
-repartida (Figura~\ref{fig:pca-varianza}): la primera componente explica solo
-el 4.5~\% y la segunda el 3.0~\%. Con 2 componentes se conserva el 7.5~\% de
-la varianza; con 96, el 67.6~\%, y con 192, el 87.8~\%.
+Con 384 componentes se conserva el 96.16~\% de la varianza; con 192, el 84.13~\%, y con 2, el 8.08~\%. Una reducción al 50~\% de las coordenadas conserva casi toda la varianza, pero PCA ordena las direcciones por varianza y no por capacidad de separar ham de spam. Por eso esa proporción no sustituye la evaluación de clasificación.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{varianza-explicada-por-el-pca-de-los-embeddings}
-    \caption{Varianza explicada por cada componente y acumulada, con los
-    tres casos del apartado.}
+    \caption{Varianza explicada por componente y acumulada en el PCA
+    descriptivo de todos los mensajes.}
     \label{fig:pca-varianza}
 \end{figure}
 
-\paragraph{El dataset en las dimensiones reducidas.} Con 2 dimensiones se
-grafican todos los mensajes en el plano
-(Figura~\ref{fig:pca-2d}). Con 96 y 192 no se pueden dibujar todas las
-dimensiones como puntos, así que se muestran los mensajes sobre las dos
-primeras componentes y, para cada componente $j$, cuánto separa a las clases,
-medido con la $d$ de Cohen:
+Con 2 dimensiones se representan todos los mensajes en el plano
+(Figura~\ref{fig:pca-2d}). Para 192 y 384, el segundo panel muestra cuánto
+separan las clases las coordenadas de cada componente, usando
 \[
-    |d_j| = \frac{|\bar z_{j,\text{spam}} - \bar z_{j,\text{ham}}|}
-    {\sqrt{(s_{j,\text{ham}}^2 + s_{j,\text{spam}}^2)/2}} ,
+    |d_j|=\frac{|\bar z_{j,\text{spam}}-\bar z_{j,\text{ham}}|}
+    {\sqrt{(s_{j,\text{ham}}^2+s_{j,\text{spam}}^2)/2}}.
 \]
-la distancia entre las medias de las clases en desviaciones estándar
-(Figura~\ref{fig:pca-alta}).
+Esta medida descriptiva compara la diferencia de medias con la dispersión
+de las clases y no se usa para elegir componentes o hiperparámetros.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.62\textwidth]{proyeccion-pca-del-dataset-2-dimensiones}
-    \caption{Todos los mensajes proyectados sobre las dos primeras
-    componentes principales.}
+    \caption{Todos los mensajes sobre las dos primeras componentes del PCA descriptivo.}
     \label{fig:pca-2d}
 \end{figure}
 
@@ -321,46 +319,39 @@ la distancia entre las medias de las clases en desviaciones estándar
     \centering
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{proyeccion-pca-del-dataset-50-de-d}
-        \caption{50~\% de $D$ ($k=192$).}
+        \caption{50~\% de $D$ ($k=384$).}
     \end{subfigure}
 
     \vspace{1ex}
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{proyeccion-pca-del-dataset-25-de-d}
-        \caption{25~\% de $D$ ($k=96$).}
+        \caption{25~\% de $D$ ($k=192$).}
     \end{subfigure}
-    \caption{Mensajes sobre las dos primeras componentes y separación entre
-    clases en cada una de las $k$ componentes.}
+    \caption{Plano de las dos primeras componentes y separación entre clases
+    en cada una de las $k$ componentes conservadas.}
     \label{fig:pca-alta}
 \end{figure}
 
-Aun con tan poca varianza, la primera componente separa bastante las clases
-($|d|=2.68$): el 82~\% del spam tiene una coordenada mayor que 0.2, frente al
-6~\% del ham. Las demás separan mucho menos: después de la primera, las
-mayores son la 4 ($|d|=0.67$) y la 9 (0.57), y solo 7 componentes superan
-0.3, todas entre las 20 primeras. Lo que distingue al spam está concentrado
-en pocas direcciones, pero no en una sola: en el plano de las dos primeras
-componentes queda una zona amplia donde las clases se mezclan.
-
-\paragraph{Clasificación.} La Tabla~\ref{tab:resultados-pca} resume las 30
-corridas. Como todas las variantes usan las mismas particiones, la última
-columna compara cada reducción con la regresión sin PCA en la misma
-partición.
+\paragraph{Clasificación.} La Tabla~\ref{tab:resultados-pca} compara las
+métricas y la diferencia pareada de F1 con respecto al caso sin PCA.
+La varianza corresponde al PCA descriptivo completo; las métricas proceden
+de los PCA ajustados de manera independiente dentro de cada corrida.
 
 \begin{table}[H]
     \centering
-    \caption{Regresión logística con y sin PCA (30 corridas, media $\pm$
-    desviación). $\Delta$F1: diferencia con la regresión sin PCA en la misma
-    partición.}
+    \caption{Regresión logística con MPNet, con y sin PCA: media $\pm$
+    desviación en 30 corridas. $\Delta$F1 compara cada variante con el caso
+    sin PCA en la misma partición.}
     \label{tab:resultados-pca}
+    \small
     \begin{tabular}{lcccc}
         \toprule
         Dimensiones & Varianza & Tasa de aciertos & F1-score & $\Delta$F1 \\
         \midrule
-        384 (sin PCA) & 100~\% & $0.9876\pm0.0022$ & $0.9528\pm0.0084$ & --- \\
-        192 & 87.8~\% & $0.9857\pm0.0025$ & $0.9453\pm0.0096$ & $-0.0075\pm0.0060$ \\
-        96  & 67.6~\% & $0.9826\pm0.0025$ & $0.9339\pm0.0096$ & $-0.0189\pm0.0080$ \\
-        2   & 7.5~\%  & $0.9405\pm0.0043$ & $0.7497\pm0.0205$ & $-0.2031\pm0.0193$ \\
+        768 (sin PCA) & 100~\% & $0.9906\pm0.0016$ & $0.9641\pm0.0063$ & --- \\
+        384 & 96.16~\% & $0.9905\pm0.0019$ & $0.9637\pm0.0075$ & $-0.0004\pm0.0030$ \\
+        192 & 84.13~\% & $0.9894\pm0.0021$ & $0.9596\pm0.0082$ & $-0.0045\pm0.0054$ \\
+        2 & 8.08~\% & $0.9466\pm0.0054$ & $0.7845\pm0.0189$ & $-0.1796\pm0.0198$ \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -368,23 +359,39 @@ partición.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{f1-score-de-la-regresion-logistica-con-y-sin-pca}
-    \caption{F1-score de las 30 corridas con y sin PCA.}
+    \caption{F1 de las 30 corridas con MPNet, con y sin PCA.}
     \label{fig:pca-f1}
 \end{figure}
 
-Ninguna reducción es gratis. Con 192 componentes el F1 baja 0.008 y es menor
-que sin PCA en 27 de las 30 corridas, aunque la pérdida es menor que la
-variación del F1 entre particiones (0.008). Casi todo el costo es spam que se
-escapa: 17.5 por corrida frente a 14.6. Con 96 el F1 baja 0.019, en las 30
-corridas, y además suben las falsas alarmas (10.8 ham marcados como spam
-frente a 6.2). Con 2 dimensiones se escapa un tercio del spam (74.7 de 224) y
-hay 24.8 falsas alarmas por corrida; su tasa de aciertos de 0.940 parece alta
-solo porque el 87~\% de los mensajes es ham, y el F1 muestra mejor la pérdida
-(Figura~\ref{fig:pca-f1}). Como cada $k$ tiene sus propios hiperparámetros,
-la caída se debe a la información que se pierde al reducir y no a que falte
-entrenamiento.
+Con 384 componentes, el cambio medio de F1 fue de $-0.0004$, con
+una desviación pareada de 0.0030; el F1 fue menor que sin PCA en 14 de las
+30 corridas. La diferencia media es pequeña y cambia de signo entre
+particiones, aunque esto no constituye una prueba formal de equivalencia.
+Con 192 componentes, el cambio fue de $-0.0045\pm0.0054$, y el F1 bajó en
+24 de las 30 corridas. Con 2 componentes, el cambio fue de
+$-0.1796\pm0.0198$ y el F1 fue menor en las 30 corridas.
 
-\paragraph{$D$ óptima.} TODO (decisión del equipo): 192 es la reducción que
-menos pierde; 96 pierde un poco más pero usa la mitad de dimensiones, lo que
-importa en el detector de anomalías, donde cada dimensión es un histograma;
-2 queda descartada.
+El tipo de error también cambia. Sin PCA se marcan en promedio 4.0 ham
+como spam y se dejan pasar 11.8 spam por corrida. Con 384 componentes,
+los promedios son 3.9 y 12.1; con 192, 4.3 y 13.4. Con 2 componentes
+suben a 27.9 y 61.4: se deja pasar alrededor del 27.4~\% de los 224 spam
+de cada prueba. Su tasa de aciertos de 0.9466 esconde una pérdida mayor
+en la clase minoritaria, que el F1 de 0.7845 hace visible.
+
+Las variantes recibieron calibración interna propia, por lo que se
+comparan después de buscar sus hiperparámetros en la misma cuadrícula.
+Esto reduce la dependencia de una configuración única, pero no permite
+atribuir toda diferencia exclusivamente a información descartada: el
+resultado también depende de una validación finita y de una búsqueda
+limitada. En particular, la tasa máxima 50 se eligió en 15 de las corridas
+con $k=384$ y en 19 con $k=192$.
+
+\paragraph{$D$ óptima.} El equipo confirmó
+\texttt{OPTIMAL\_PCA\_DIMENSIONS = 384} el 24 de octubre de 2026.
+Esta elección reduce a la mitad las 768 características y conserva el
+96.16~\% de la varianza del PCA descriptivo. El F1 medio de 0.9637 queda
+próximo al 0.9641 del caso sin PCA, con diferencia media pareada de
+$-0.0004$; esta cercanía no demuestra equivalencia estadística. Se adopta
+como compromiso entre reducción de dimensionalidad y clasificación
+observada. El punto 2 estimará 384 histogramas, uno por componente, en
+lugar de 768; su implementación y evaluación siguen pendientes.

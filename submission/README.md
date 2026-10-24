@@ -4,11 +4,13 @@ Esta carpeta se reserva para las copias finales y verificadas de los archivos
 solicitados por TEC Digital. No trabajar directamente sobre esas copias.
 
 El enunciado pide un archivo `.zip` con el código fuente LaTeX, el PDF y el
-notebook. Como el notebook importa `punto1.py`, `punto2.py`, `punto3.py` y
-`utils.py`, el `.zip` debe incluir (ver también la checklist de `TODO.md`):
+notebook. Toda la implementación está en el notebook; el `.zip` debe incluir
+(ver también la checklist de `TODO.md`):
 
 - `notebooks/tp2_detector_spam.ipynb`, ejecutado de principio a fin.
-- `src/tp2/` y `tests/`, de los que depende el notebook.
+- `tests/`, con las pruebas que cargan las definiciones del notebook.
+- `data/raw/SMSSpamCollection`, el dataset original de UCI sin editar, y su
+  fuente y licencia en `data/README.md`.
 - `requirements.txt`.
 - `docs/report/` (fuentes LaTeX) y `results/figures/`, que el informe usa.
 - `tp2_detector_spam.pdf`, generado con `./build_pdf.sh`.

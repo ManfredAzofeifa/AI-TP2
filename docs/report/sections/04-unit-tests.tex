@@ -9,6 +9,17 @@ documentada con Doxygen que falla mediante \texttt{assert} o
 \texttt{torch.testing.assert\_close} si el resultado no coincide con el
 esperado.
 
+La implementación que se prueba vive en el mismo notebook. El cargador
+\path{tests/notebook_loader.py} ejecuta únicamente las celdas cuyo prefijo
+es \texttt{\# Definiciones:}; excluye la configuración, la descarga de
+modelos y las corridas experimentales. Así las pruebas verifican las
+funciones entregadas en el cuaderno sin mantener una copia separada en
+archivos por punto. Las pruebas de estructura comprueban que el notebook
+sea válido, que no importe el antiguo paquete y que las definiciones no se
+dupliquen. La última ejecución de \texttt{pytest} dio 30 pruebas superadas,
+2 pendientes y ninguna fallida; las dos pendientes corresponden a los
+puntos 2 y 3.
+
 \subsection{Evaluación del modelo}
 
 \begin{description}[style=nextline]
@@ -84,3 +95,23 @@ verifica el resto del punto 1 sin descargar datos ni modelos:
     explicada y de proyección (con 2 y con más componentes) devuelven una
     figura con el título pedido y la cantidad de paneles esperada.
 \end{description}
+
+\subsection{Protocolo experimental y caché}
+
+Las cuatro pruebas de \path{tests/test_experiment_protocol.py} usan
+tensores pequeños y reproducibles, sin descargar modelos ni datos:
+
+\begin{enumerate}
+    \item Comparan todos los candidatos de una cuadrícula vectorizada con
+    entrenamientos independientes, incluyendo el estado inicial y varios
+    checkpoints. Verifican F1 y pérdidas de ajuste y validación.
+    \item En dos semillas comprueban que el ajuste y la validación interna
+    pertenecen al entrenamiento de esa corrida, que son disjuntos y que
+    excluyen la prueba. También verifican que el entrenamiento final use la
+    tasa y las épocas del candidato ganador.
+    \item Comprueban que el PCA interno se ajuste sin validación ni prueba,
+    que el PCA final use solo el entrenamiento completo y que distintos
+    valores de $k$ reutilicen únicamente ajustes con los mismos índices.
+    \item Rechazan cachés antiguas o incompatibles por orden de los textos,
+    identificador o revisión del modelo, forma, tipo o valores no finitos.
+\end{enumerate}

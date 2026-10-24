@@ -5,7 +5,7 @@
 
 import torch
 
-from tp2 import punto2
+from notebook_loader import notebook as punto2
 
 
 def test_predict_anomalies_uses_threshold():
