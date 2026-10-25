@@ -16,7 +16,7 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} dio 44 pruebas superadas,
+dupliquen. La última ejecución de \texttt{pytest} dio 48 pruebas superadas,
 1 pendiente y ninguna fallida; la pendiente corresponde al punto 3.1.
 
 \subsection{Evaluación del modelo}
@@ -36,6 +36,12 @@ dupliquen. La última ejecución de \texttt{pytest} dio 44 pruebas superadas,
     estabilidad numérica; la forma directa de la sigmoide no supera esta
     prueba porque su gradiente resulta indefinido.
 \end{description}
+
+Una tercera prueba de \texttt{forward},
+\texttt{test\_forward\_gradient\_at\_zero\_matches\_sigmoid\_derivative},
+comprueba $\partial p/\partial w=x/4$ y $\partial p/\partial b=1/4$ con
+logit cero. Reprodujo una derivada nula en la versión anterior y pasa con
+la selección explícita de la rama del exponente.
 
 \subsection{Entrenamiento}
 
@@ -141,3 +147,11 @@ tensores pequeños construidos a mano:
     formados o no finitos, cantidades de intervalos y cuantiles inválidos; las
     cuatro figuras devuelven su título como \texttt{suptitle}.
 \end{itemize}
+
+\subsection{Ejecución portátil de los puntos 1 y 2}
+Tres pruebas adicionales comprueban que el ejecutor compartido seleccione
+los puntos 1 y 2 y las pruebas sin modificar la configuración original,
+que valide la caché sin tocar resultados existentes y que ejecute una celda
+mínima en un kernel limpio del mismo intérprete invocante. No descargan
+modelos ni ejecutan experimentos largos. El procedimiento para otras
+computadoras se describe en \path{docs/reproducibility.md}.

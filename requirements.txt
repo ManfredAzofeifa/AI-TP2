@@ -3,6 +3,10 @@
 jupyterlab
 matplotlib==3.11.2
 nbconvert
+# Ejecución portátil del notebook con el mismo intérprete (scripts/run_puntos_1_2.py).
+nbclient
+nbformat
+ipykernel
 numpy==2.5.3
 # 3.0.6 is blocked by Windows 11 Smart App Control; 3.0.3 loads correctly.
 pandas==3.0.3

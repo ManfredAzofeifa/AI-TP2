@@ -48,30 +48,52 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   k = 2 (−0.0802) en las 30 corridas. Detecta casi el mismo spam que la
   regresión con k = 2, pero marca más ham (4.9 % contra 1.9 %).
 - **Pendiente:** punto 3.
-- **Pruebas verificadas:** 44 superadas, 1 pendiente (3.1), 0 fallidas.
-  Las 120 corridas UCI se completaron sin ejecutar previamente 1.3.
+- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+  La ejecución original de las 120 corridas UCI no dependió de 1.3.
+  La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
+  del notebook también dieron 48/1/0.
+- **Auditoría de 1 y 2 (24/10/2026):** corregida la derivada de `forward`
+  con logit cero (debe ser 1/4), con prueba de regresión. No cambia el
+  gradiente manual del entrenamiento. El punto 2 está implementado, pero
+  su conformidad literal sigue abierta: el enunciado pide reutilizar D=384
+  y el equipo usa D=2. La selección global de D agrega particiones que se
+  solapan; no afirmar que todas las pruebas quedaron aisladas de esa decisión.
+- **Métricas auditadas:** 30 corridas por variante adicional. La regresión
+  ampliada no mejora F1; el detector calibrado obtiene accuracy 0.9321 y F1
+  0.7173, pero eleva el spam escapado de 64.0 a 78.1 por prueba. Entre 145
+  y 181 textos de prueba ya aparecen en entrenamiento (media 9.70 %).
+  Es evidencia exploratoria; conservar las constantes vigentes.
+- **Paquete para el equipo (25/10/2026):** `scripts/run_puntos_1_2.py`,
+  `docs/reproducibility.md` y `requirements-audit.txt`. El notebook del commit
+  queda sin salidas de desarrollo. Main incluye fuentes, pruebas y ambos
+  PDF; los CSV experimentales adicionales y PNG regenerados están en
+  `codex/audit-puntos-1-2`. El informe sigue siendo preliminar. La guía permite regenerar
+  la caché y los resultados sin rutas ni herramientas privadas de esta máquina.
+- **Selección mínima para main (25/10/2026):** fuentes LaTeX, PDF, notebook,
+  pruebas, Python y dependencias para continuar. Se conservan las constantes
+  del equipo; las sugerencias quedan documentadas y desactivadas.
 - **Revisión interna:** `docs/report/review.tex` y su PDF se actualizan juntos.
 
 ## Próximos pasos (24/10/2026)
 
 Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
 
-1. **Ejecutar el notebook completo desde un kernel limpio.** El punto 2 se
-   ejecutó en un entorno aparte, así que sus celdas no tienen salidas en el
-   notebook. La ejecución completa debe:
-   - mostrar las salidas del 2.1 y el 2.2 dentro del notebook;
-   - regenerar `results/tables/resultado-de-las-pruebas-unitarias.csv`, que
-     todavía dice 30 superadas y 2 pendientes (`pytest` da 44 superadas y 1
-     pendiente);
-   - regenerar la figura de F1 del 1.5 con las etiquetas en dos líneas.
-
-   La celda de configuración borra `results/figures/` y `results/tables/`: no
-   detener la ejecución a medias. Mientras falte el punto 3, se detiene en su
-   primer `NotImplementedError`, después del punto 2. La primera vez descarga
-   MPNet (unos 420 MB) y codifica los 5 574 mensajes en CPU con un hilo
-   (`torch.set_num_threads(1)`), lo que puede tardar más de 10 minutos; luego
-   usa la caché de `data/processed/`. Las 120 corridas del punto 1 tardaron
-   unos 7 minutos en Linux.
+1. **Resolver con el docente el alcance del 2.1.** La persona confirmó
+   conservar la configuración vigente y dejar las alternativas como sugerencias.
+   El detector vigente usa D=2; la referencia literal con D=384 ya se evaluó
+   en 30 corridas (F1 0.0386). La calibración adicional mejora el F1 medio
+   del detector a 0.7173, pero deja escapar más spam; no se adoptó.
+   Ampliar la cuadrícula de regresión no mejoró F1 (0.9636 frente a 0.9641).
+   Puntos 1 y 2 y pruebas ya se ejecutaron desde un kernel nuevo, con salidas
+   conservadas en la copia local ejecutada y tabla 48/1/0. Las 18 figuras
+   regeneradas e inspeccionadas se conservan en la rama de auditoría; main
+   mantiene sus PNG previos y recompila los PDF con ellos.
+   La ejecución final de principio a fin sigue pendiente del punto 3.
+   La configuración borra las exportaciones, incluidas las tablas de auditoría;
+   para regenerar estas últimas activar la celda opcional con autorización.
+   Mantener `RUN_METRIC_AUDIT = False` cuando no se quieran repetir esas corridas.
+   Sin caché, MPNet puede requerir descarga y más de 10 minutos de extracción:
+   pedir confirmación antes de descargar o ejecutar corridas largas.
 2. **Avisar a todo el equipo** que el detector del punto 2 usa
    `ANOMALY_PCA_DIMENSIONS = 2` y no 384; la regresión conserva
    `OPTIMAL_PCA_DIMENSIONS = 384`.
@@ -87,10 +109,6 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
    24; si hay prórroga, corregirla aquí, en `AGENTS.md` y en `README.md`.
 6. **Cierre:** generar Doxygen, el PDF final con `./build_pdf.sh` y el `.zip`
    ([Checklist de entrega](#checklist-de-entrega)).
-7. **Menor:** `plot_metric_distributions` (diagramas de caja de 1.5 y 2.2)
-   usa el estilo por defecto de matplotlib, con la mediana en naranja (el
-   color del spam). Pasarla al estilo común (`_style_axis`, mediana en tinta
-   neutra) antes de la ejecución final.
 
 ## Cómo trabajar
 
@@ -172,8 +190,10 @@ archivo, sus pruebas y las celdas del notebook que lo usan.
 - Punto 1.5: reducir a 50 %, 25 % y 2 dimensiones (384, 192 y 2 de 768).
   Ajustar PCA con ajuste interno durante la calibración y con el 70 % de
   entrenamiento al evaluar; usar las mismas particiones para comparar.
-- Punto 2.1: usar la $D$ confirmada a partir de 1.5
-  (`OPTIMAL_PCA_DIMENSIONS = 384`), con un histograma por componente.
+- Punto 2.1: la lectura literal pide reutilizar la D de 1.5 (384). La
+  configuración vigente del equipo usa `ANOMALY_PCA_DIMENSIONS = 2`;
+  documentar ambos casos y validar esa variante con el docente. Los
+  histogramas usan solo ham; seleccionar D por F1 sí usa spam de validación.
 - Punto 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas en todos los puntos: tasa de aciertos y F1-score.
 
@@ -220,6 +240,12 @@ sección "Objetivo y protocolo" del notebook y en el informe.
 - [x] Dimensión del detector (2.1, 24/10/2026): `ANOMALY_PCA_DIMENSIONS = 2`,
       el mejor de los casos de 1.5 en validación interna; la regresión
       conserva `OPTIMAL_PCA_DIMENSIONS = 384`. Avisar al resto del equipo.
+- [ ] Validar con el docente si acepta D=2 como variante del 2.1; conservar
+      también el resultado de D=384 para responder la lectura literal.
+- [x] Conservar la configuración vigente, confirmado el 25/10/2026. Las
+      alternativas quedan documentadas sin adoptarse; no cambian las constantes.
+- [x] Compartir el ejecutor parcial y la guía de reproducción, con versiones
+      directas observadas; excluir cachés, pesos de modelos y entornos locales.
 - [ ] `LLM_MODELS` (3.1, al menos uno; 3.2 extra, al menos dos más), el
       prompt y qué hacer con respuestas ambiguas. Son 5 574 mensajes por
       modelo; preferir modelos que corran en las computadoras del equipo.
@@ -234,6 +260,8 @@ Es la ruta crítica: el punto 2 necesita sus características (1.4) y su PCA
 - [x] **1.1 (10)** `forward`: logits $Xw + b$ y sigmoide estable propia.
   - [x] 1.1a: `test_forward_zero_parameters_returns_one_half` y
         `test_forward_matches_sigmoid_and_is_stable`.
+  - [x] Prueba adicional del gradiente de `forward` en logit cero; reproduce
+        el fallo anterior y verifica las derivadas de pesos y sesgo.
 - [x] **1.2 (10)** `train_logistic_regression`: descenso del gradiente por
       lotes completos sobre la entropía cruzada, con gradiente exacto,
       inicialización con `seed` e historial de pérdida (épocas + 1 valores).
@@ -309,8 +337,8 @@ el mismo que clasificar cada muestra, con 30 veces menos inferencias.
 
 - [ ] Completar las constantes de la celda de configuración del notebook.
 - [ ] Analizar la sección "Comparación de resultados" del notebook.
-- [ ] Informe: `00-introduction.tex`, `05-comparison.tex` y
-      `06-conclusions.tex`.
+- [x] Informe: `00-introduction.tex`, con alcance auditado de 1 y 2.
+- [ ] Informe: `05-comparison.tex` y `06-conclusions.tex`, después del punto 3.
 - [ ] Mantener al día el "Estado" del encabezado del notebook y la lista
       final de pendientes.
 - [ ] Generar Doxygen (`README.md`, "Documentación interna") y copiar
@@ -329,7 +357,8 @@ Registro de verificaciones realizadas y trabajo pendiente:
       `docs/report/review.pdf`.
 - [x] El informe (`main.tex`) compila: 17 páginas, sin citas sin resolver
       ni líneas fuera del margen en la pasada final (24/10/2026); con el
-      punto 2 son 23 páginas. Es preliminar: falta el punto 3.
+      punto 2 eran 23 páginas. La versión auditada y la revisión interna
+      compilan y se revisaron visualmente. Es preliminar: falta el punto 3.
 - [ ] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
       entrega, con todos los puntos terminados.
 - [x] Migración del notebook: `nbformat`, IDs únicos y AST válidos;
@@ -347,9 +376,12 @@ Registro de verificaciones realizadas y trabajo pendiente:
       (solo cambian pérdidas de calibración en el séptimo decimal y un empate
       de épocas en la corrida 23 con k = 2, sin cambio de métricas). No se
       sobrescribieron los archivos del punto 1.
-- [ ] Volver a ejecutar la celda de pruebas del notebook (ahora 44/1/0 en
-      pytest) y el notebook completo desde un kernel limpio; regenera la
-      figura de F1 del 1.5 con las etiquetas en dos líneas.
+- [x] Auditoría: puntos 1 y 2 completos desde un kernel nuevo; 48/1/0 en
+      la celda de pruebas. Las 18 figuras regeneradas y los diagramas con
+      estilo común están en `codex/audit-puntos-1-2`. Sin descargas.
+- [x] 30 corridas por alternativa adicional, con selección interna de cada
+      entrenamiento y tablas exportadas desde la celda opcional del notebook.
+- [ ] Ejecución final de principio a fin después de implementar el punto 3.
 - [ ] Generación de Doxygen (no estaba instalado).
 
 ## Checklist de entrega

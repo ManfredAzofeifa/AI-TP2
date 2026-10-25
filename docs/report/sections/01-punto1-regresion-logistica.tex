@@ -24,6 +24,11 @@ se evalúa con $e^{-|z|}\in(0,1]$:
 Ninguna de las dos ramas produce infinitos, ni en el valor ni en el
 gradiente, mientras que la forma directa $1/(1+e^{-z})$ calcula $e^{1000}$
 para $z=-1000$ y su gradiente con Autograd resulta indefinido.
+Para conservar también $\sigma'(0)=1/4$, el exponente se implementa
+seleccionando $-z$ si $z\geq0$ y $z$ en caso contrario. Usar directamente
+\texttt{abs} daría una derivada nula en cero con Autograd. Una prueba
+adicional verifica los gradientes de pesos y sesgo en ese punto; el
+entrenamiento conserva su gradiente analítico propio.
 
 \subsection{Entrenamiento}
 
@@ -126,7 +131,8 @@ divididos por $\lVert w\rVert$ y el ángulo entre $w$ y $w^*$.
     \label{fig:sinteticos-frontera}
 \end{figure}
 
-El regresor recupera la frontera verdadera. En la época 0 los pesos son casi
+El regresor aprende una frontera separadora casi paralela a la verdadera.
+En la época 0 los pesos son casi
 nulos ($\lVert w\rVert=0.02$) y la frontera está girada 26° respecto de la
 verdadera; tras 10 épocas ya clasifica bien todo el entrenamiento y tras 1000
 el ángulo es de 0.01°. La pérdida baja de 0.681 a 0.009 sin oscilar. En los
@@ -396,3 +402,28 @@ como compromiso entre reducción de dimensionalidad y clasificación
 observada para la regresión logística. El detector de histogramas del
 punto 2 compara estos mismos casos con su propia validación interna y usa
 2 componentes (Sección~\ref{sec:punto2}).
+Esta última elección constituye una variante respecto de la lectura literal
+del apartado 2.1, que pide reutilizar la dimensión óptima del apartado anterior.
+Su justificación experimental no sustituye la validación de ese alcance con
+el docente.
+
+\subsection{Auditoría de la cuadrícula de entrenamiento}
+Con las mismas 30 particiones se amplió la cuadrícula a 9 tasas (se agrega
+100) y 6 checkpoints (se agrega 8000). Cada corrida seleccionó por F1 y
+pérdida en su propia validación interna, y volvió a entrenar con todo su
+entrenamiento. La cuadrícula ampliada obtuvo tasa de aciertos
+$0.9904\pm0.0018$ y F1 $0.9636\pm0.0068$, frente a
+$0.9906\pm0.0016$ y $0.9641\pm0.0063$ de la vigente. La diferencia
+pareada de F1 fue $-0.0005\pm0.0023$: mejoró en 2 corridas, empató en
+22 y empeoró en 6. Aumentar la búsqueda mejoró el F1 medio de validación
+(0.9680 frente a 0.9673), pero no el de prueba. Se conserva la cuadrícula
+vigente; alcanzar sus bordes no bastaba para concluir que ampliarla mejoraría
+la clasificación.
+
+En estas particiones, entre 145 y 181 mensajes de prueba por corrida tienen
+un texto idéntico en entrenamiento: media 162.2 de 1672 (9.70~\%). Sobre
+los textos de prueba ausentes del entrenamiento, la regresión vigente obtiene
+F1 $0.9565\pm0.0076$. Este diagnóstico describe otro subconjunto, con
+composición y dificultad propias; su diferencia con el F1 completo no mide
+por sí sola el sesgo por duplicados. Para evaluarlo haría falta acordar una
+partición agrupada por texto. El archivo original se conserva íntegro.

@@ -73,24 +73,47 @@ verificación pendiente de `TODO.md`.
   tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247, menor que la
   regresión sin PCA (F1 −0.2597) y con k = 2 (−0.0802) en las 30 corridas.
 - **Pendiente:** punto 3.
-- **Pruebas verificadas:** 44 superadas, 1 pendiente (3.1), 0 fallidas.
-  Las 120 corridas UCI se ejecutaron antes de crear los datos sintéticos de 1.3.
-  La celda de pruebas del notebook dio 30/2/0 antes del 2.1; falta repetirla. El IDE no resuelve estáticamente
-  algunos imports de tests y atributos del módulo cargado dinámicamente;
-  su ejecución real y pytest pasan. Revisión PDF compilada; informe preliminar
-  de 23 páginas también compila, con el punto 3 pendiente.
+- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+  Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
+  la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
+  auditoría están en `codex/audit-puntos-1-2`; main conserva sus PNG previos.
+  La ejecución final completa sigue pendiente del punto 3. Informe preliminar
+  y revisión interna compilados y revisados visualmente.
+- **Preparación para el equipo (25/10/2026):** ejecutor portable en
+  `scripts/run_puntos_1_2.py` y guía en `docs/reproducibility.md`. El notebook
+  se versiona sin salidas de desarrollo. Main incorpora los fuentes,
+  pruebas, dependencias, PDF y la tabla de pruebas; los CSV experimentales
+  adicionales y PNG regenerados permanecen en `codex/audit-puntos-1-2`. `requirements-audit.txt` registra las versiones directas
+  observadas. No incluir cachés, pesos de modelos ni entornos locales.
+- **Auditoría de 1 y 2 (24/10/2026):** `forward` conserva ahora derivada
+  1/4 con logit cero; una prueba reproduce el fallo de la implementación
+  con `abs`. El entrenamiento ya usa el gradiente analítico y no depende
+  de Autograd. La conformidad literal de 2.1 queda abierta: reutilizar
+  D=384 frente a la variante D=2 del equipo. Documentar ambos casos y
+  validar esa variante con el docente. Agregar validaciones de particiones
+  solapadas no aísla globalmente sus pruebas de la selección de D.
+
+- **Selección mínima para main (25/10/2026):** corrección de `forward`,
+  notebook, pruebas, ejecutor portátil, dependencias y documentación necesaria
+  para continuar el punto 3. Las sugerencias siguen sin adoptarse. Los PDF
+  se recompilan con los PNG previos de main, sin reejecutar experimentos.
 
 ## Próximos pasos
 
 Lista completa y notas de ejecución en
 [TODO.md](TODO.md#próximos-pasos-24102026). Resumen para agentes:
 
-1. Ejecutar el notebook completo desde un kernel limpio. Las celdas del punto
-   2 no tienen salidas (se ejecutaron aparte), y
-   `results/tables/resultado-de-las-pruebas-unitarias.csv` sigue en 30/2/0.
-   La configuración borra `results/`: no detenerla a medias. Sin caché, la
-   extracción de MPNet en CPU con un hilo tarda más de 10 minutos; pedir
-   confirmación antes de descargar o ejecutar corridas largas.
+1. Resolver con el docente el alcance de 2.1 frente al enunciado.
+   La persona confirmó el 25/10/2026 conservar la configuración vigente;
+   las alternativas permanecen documentadas sin adoptarse. La referencia
+   D=384 ya tiene 30
+   corridas (F1 0.0386). El detector calibrado mejora F1 a 0.7173, pero
+   deja escapar más spam. La regresión ampliada no mejora. Mantener las
+   constantes vigentes mientras no se acuerde otra configuración.
+   La celda opcional de auditoría queda desactivada; activarla repite corridas
+   largas. La configuración limpia también sus tablas. La autorización
+   recibida cubre esta auditoría con caché local, sin descargar modelos.
+   Después del punto 3, ejecutar todo el notebook para la entrega.
 2. Recordar a la persona que avise al equipo: el detector usa
    `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
 3. Punto 3: no elegir `LLM_MODELS`, prompt ni LoRA/DoRA sin confirmación del
@@ -99,8 +122,6 @@ Lista completa y notas de ejecución en
    notebook, después del punto 3.
 5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y
    el registro es del 24/10/2026); después, Doxygen, PDF final y `.zip`.
-6. Menor: llevar `plot_metric_distributions` al estilo común de las gráficas
-   (hoy usa el de matplotlib, con la mediana en naranja).
 
 ## Antes de modificar
 
@@ -172,6 +193,11 @@ Lista completa y notas de ejecución en
   con el entrenamiento de cada corrida, las densidades solo con sus ham y el
   umbral con ham reservado de ese entrenamiento. La regresión conserva
   `OPTIMAL_PCA_DIMENSIONS = 384`.
+- D=2 es una variante respecto de la lectura literal de 2.1; registrar
+  esa diferencia al informar cumplimiento. La selección por F1 usa spam
+  de validación, aunque las densidades se ajusten solo con ham. El cuantil
+  empírico fija una fracción objetivo en calibración y no garantiza la misma
+  tasa de falsos positivos en datos futuros.
 - 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas: tasa de aciertos y F1-score.
 

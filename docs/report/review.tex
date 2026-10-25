@@ -17,18 +17,17 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-Revisión interna del detector de spam: recoge la implementación en un único
-cuaderno, la auditoría del dataset, el modelo con sesgo y la evaluación de
-regresión logística con y sin PCA. Los resultados anteriores de MiniLM con
-384 características no describen el nuevo codificador MPNet con 768 ni el
-protocolo de validación corregido. Se completaron 30 corridas por cada una
-de las cuatro variantes de regresión con MPNet. El punto 2 está completo:
-el detector de histogramas usa 2 componentes, elegidas en validación interna
-porque con 384 el spam resulta más verosímil que el ham. En 30 corridas
-obtiene F1 0.7043, frente a 0.9641 de la regresión sin PCA. Este documento se mantiene junto con
-\texttt{TODO.md}, \texttt{AGENTS.md} y su PDF compilado.
+Revisión interna de los puntos 1 y 2: regresión logística propia, PCA y
+detección por histogramas con MPNet de 768 características. Se verificaron
+30 corridas por método, 48 pruebas superadas y una pendiente del punto 3.
+La auditoría corrigió la derivada de la sigmoide en cero y comparó
+alternativas de calibración. Ampliar la regresión no mejoró F1; calibrar el
+detector redujo falsas alarmas, pero dejó escapar más spam. La variante
+$D=2$ del equipo difiere de reutilizar $D=384$, como pide la lectura literal
+del enunciado: su aceptación sigue pendiente. Se mantienen las
+configuraciones vigentes y el punto 3 queda fuera del alcance.
 \end{abstract}
-\tableofcontents
+{\small\tableofcontents}
 \newpage
 
 \section{Alcance y organización}
@@ -268,7 +267,7 @@ frente a 4.4\,\%.
 \item Con 384 componentes el detector casi no encuentra spam. Se diagnosticó
 con la brecha por componente (media de $\log p_d$ de ham menos la de spam) y
 se compararon los casos de 1.5 en la validación interna de los 30
-entrenamientos, sin usar la prueba.
+entrenamientos, sin usar la prueba de esa misma corrida.
 \item Se agregaron cinco pruebas: suma por dimensión, umbral con filas
 reservadas, candidatos con columnas iniciales y solo ham, signo de la brecha
 y títulos de las figuras nuevas.
@@ -281,7 +280,7 @@ del entrenamiento, como en 1.4) de las 30 particiones; media $\pm$ desviación:
 \toprule
 $D$ & Tasa de aciertos & F1 & Spam detectado & Ham marcado & Gana\\
 \midrule
-384 & $0.7810\pm0.0140$ & $0.0401\pm0.0193$ & 3.4\,\% & 10.3\,\% & 0\\
+384 & $0.7812\pm0.0141$ & $0.0401\pm0.0193$ & 3.4\,\% & 10.3\,\% & 0\\
 192 & $0.8425\pm0.0072$ & $0.0237\pm0.0191$ & 1.4\,\% & 2.9\,\% & 0\\
 2 & $0.9201\pm0.0106$ & $0.7085\pm0.0318$ & 72.1\,\% & 4.9\,\% & 30\\
 \bottomrule
@@ -291,8 +290,9 @@ En la primera partición, la brecha de la componente~1 es 12.8 y es negativa
 en 330 de las 384 componentes: el spam está más concentrado que el ham y
 recibe más densidad. La brecha acumulada vale $+12.6$ con 2 componentes,
 cruza cero en 169, vale $-2.8$ con 192 y $-41.1$ con 384. Su máximo (14.2,
-con 11) no se evaluó porque el enunciado limita la elección a las dimensiones
-de 1.5.
+con 11) no se evaluó porque el equipo restringió la búsqueda a los tres
+casos de 1.5. El enunciado pide reutilizar la D óptima anterior, sin
+prescribir esa búsqueda para el detector.
 
 \begin{figure}[H]
 \centering
@@ -337,7 +337,7 @@ Histogramas, $D=2$ & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 71.4\,\%\\
 Diferencia pareada de F1 del detector: $-0.2597\pm0.0253$ frente a la
 regresión sin PCA y $-0.0802\pm0.0212$ frente a $k=2$; menor en las 30
 corridas en ambos casos. El F1 de validación del 2.1 (0.7085) anticipó el de
-prueba (0.7043). Con 2 componentes, ambos métodos detectan casi el mismo
+prueba (0.7043). Con 2 componentes, ambos métodos detectan una fracción similar de
 spam; el detector marca más ham (4.9\,\% contra 1.9\,\%) porque su umbral
 acepta el 5\,\% de los ham y no sabe hacia dónde está el spam.
 
@@ -347,22 +347,142 @@ acepta el 5\,\% de los ham y no sabe hacia dónde está el spam.
 \caption{F1 del detector y de la regresión en las mismas 30 particiones.}
 \end{figure}
 
+\section{Auditoría de los puntos 1 y 2 (24/10/2026)}
+\label{sec:auditoria}
+\subsection{Cobertura del enunciado}
+Se revisaron las definiciones y llamadas del cuaderno, las pruebas externas,
+las tablas exportadas y las secciones LaTeX contra las dos páginas del
+enunciado. El punto 3 queda fuera del alcance de esta auditoría.
+\begin{description}
+\item[1.1 y 1.2.] Implementaciones propias de evaluación y descenso del
+gradiente en PyTorch, sin capas ni optimizadores prefabricados. Hay dos
+pruebas obligatorias por función. Una prueba adicional descubrió que
+\texttt{abs} anulaba la derivada de la sigmoide en logit cero; la selección
+explícita de la rama conserva $\sigma'(0)=1/4$. Los valores del forward y
+el gradiente manual del entrenamiento se conservan.
+\item[1.3.] Datos sintéticos separables, con prueba independiente, tablas,
+pérdida y fronteras. El ángulo casi coincide con el verdadero, pero el sesgo
+normalizado sigue desplazado: clasificar todo bien no identifica una única
+frontera verdadera.
+\item[1.4 y 1.5.] Codificador MPNet, 30 particiones 70/30, tasa de aciertos,
+F1 de spam y PCA a 384, 192 y 2 componentes. La selección de tasa y épocas
+y el ajuste de PCA excluyen la prueba de cada corrida. El PCA sobre todos
+los datos se usa solo para figuras descriptivas. Las secciones del informe
+ya estaban redactadas; se corrigen sus afirmaciones y se amplía la evidencia.
+\item[2.1.] Histogramas normalizados por dimensión, suma de logaritmos,
+umbral y figuras implementados y probados. La decisión del equipo de usar
+$D=2$ difiere de reutilizar $D=384$, como pide la lectura literal. Se
+conserva esa decisión y se añade una referencia con 384 componentes;
+queda pendiente validar con el docente si acepta la variante.
+\item[2.2.] Se evalúan 30 particiones compartidas con el punto 1 y se
+comparan ambas métricas y los errores por clase. No debe darse por cerrado
+el cumplimiento de 2.1 únicamente por el mejor F1 de la variante.
+\end{description}
+
+\subsection{Límites de las conclusiones anteriores}
+Las 30 particiones se solapan. Cada validación interna excluye su propia
+prueba, pero agregar todas para elegir una única dimensión permite que una
+fila de prueba de una corrida participe en la decisión a través de otra.
+Aquí $D=2$ gana en las 30 validaciones: seleccionarla por corrida da la misma
+dimensión observada, sin demostrar ausencia de sesgo de desarrollo.
+La elección del compromiso $D=384$ en 1.5 también se apoyó en la comparación
+de métricas de prueba; sus resultados se interpretan como comparación
+descriptiva y no como evaluación independiente de una dimensión seleccionada.
+La cercanía entre F1 de validación y prueba no prueba ausencia de sesgo.
+La selección de dimensión por F1 usa etiquetas de spam: las densidades son
+de una clase, pero todo el procedimiento no es enteramente no supervisado.
+El cuantil de ham reservado fija una fracción objetivo en calibración y no
+garantiza esa tasa en datos futuros. El número total de ham tampoco
+garantiza que cada intervalo de las colas esté bien poblado.
+
+\subsection{Experimento adicional reproducible}
+La celda opcional posterior al punto 2 conserva las constantes vigentes.
+Compara la cuadrícula de regresión con su ampliación a tasa 100 y 8000
+épocas. Para el detector compara $D=384$, $D=2$ vigente y una selección
+interna de $D\in\{384,192,2\}$, intervalos $\{15,30,60\}$ y cuantiles
+$\{0.01,0.025,0.05,0.1\}$. Cada alternativa se selecciona exclusivamente
+con el entrenamiento de su corrida. También cuenta textos idénticos
+compartidos por entrenamiento y prueba y calcula un F1 diagnóstico sobre
+textos no vistos. Ese subconjunto no equivale a una partición agrupada ni
+cuantifica por sí solo el sesgo por duplicados.
+Las alternativas son exploratorias: se diseñaron después de conocer los
+resultados previos del mismo dataset y no sustituyen una evaluación nueva.
+La persona autorizó estas corridas con la caché local y sin descargas.
+
+\paragraph{Resultados de las 30 corridas por variante.}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Variante & Tasa de aciertos & F1\\
+\midrule
+Regresión vigente & $0.9906\pm0.0016$ & $0.9641\pm0.0063$\\
+Regresión, cuadrícula ampliada & $0.9904\pm0.0018$ & $0.9636\pm0.0068$\\
+Histogramas, $D=384$ & $0.7892\pm0.0119$ & $0.0386\pm0.0145$\\
+Histogramas, $D=2$ vigente & $0.9195\pm0.0084$ & $0.7043\pm0.0247$\\
+Histogramas, calibración por corrida & $0.9321\pm0.0061$ & $0.7173\pm0.0441$\\
+\bottomrule
+\end{tabular}
+\end{center}
+La ampliación de la regresión mejora F1 en 2 corridas, empata en 22 y
+empeora en 6: diferencia pareada $-0.0005\pm0.0023$. Se conserva la
+cuadrícula vigente. El detector calibrado mejora en 24 y empeora en 6,
+con diferencia $+0.0130\pm0.0519$. Elige siempre $D=2$, cuantil 1\,\% o
+2.5\,\% en 27 corridas y 5\,\% en 3. Reduce los ham marcados de 70.5 a
+35.4 por prueba, pero aumenta el spam escapado de 64.0 a 78.1 y la desviación
+de F1 de 0.0247 a 0.0441. Su F1 medio de validación es 0.7480 y el de
+prueba 0.7173; no se adopta automáticamente esa alternativa.
+
+Entre 145 y 181 textos de prueba por corrida ya aparecen en entrenamiento;
+media 162.2 (9.70\,\%). El F1 de la regresión vigente sobre textos no
+vistos es $0.9565\pm0.0076$. Esto no cuantifica el sesgo por duplicados:
+es un subconjunto distinto y no una partición agrupada.
+Las tres tablas completas, versionadas en la rama de auditoría, se
+exportan desde la celda opcional a \texttt{results/tables/auditoria-*.csv}; la implementación permanece en
+el notebook, sin copias Python. La celda queda desactivada por defecto;
+se ejecutó con activación temporal y autorización para estas corridas.
+
+\paragraph{Selección mínima para main (25/10/2026).}
+La rama de auditoría conserva la evidencia experimental completa. En main se incorporan las correcciones
+del notebook, las pruebas, el ejecutor portátil con sus dependencias, las
+fuentes LaTeX y ambos PDF para continuar el punto 3. Los CSV experimentales
+adicionales y los PNG regenerados quedan en la rama de auditoría; main
+conserva sus figuras anteriores y recompila los PDF con ellas. No se
+adoptan las alternativas de calibración ni se cambian las constantes.
+
+\paragraph{Paquete para el equipo (25/10/2026).}
+La persona confirmó conservar las configuraciones vigentes y mantener las
+sugerencias documentadas. Se incorpora
+\path{scripts/run_puntos_1_2.py}: selecciona las celdas existentes, valida la
+caché antes de limpiar resultados y usa un kernel nuevo del intérprete
+invocante. No duplica la implementación del notebook. \texttt{--check}
+no ejecuta experimentos; \texttt{--audit} activa las alternativas solo en
+una copia y \texttt{--allow-download} permite regenerar MPNet explícitamente.
+Se guarda un respaldo local de resultados y el notebook ejecutado en
+\texttt{build/}; el notebook canónico del commit queda sin salidas de
+ desarrollo. La rama de auditoría conserva los CSV y PNG regenerados;
+main incorpora los fuentes, pruebas, dependencias, PDF y tabla de pruebas.
+La guía \path{docs/reproducibility.md} y
+\texttt{requirements-audit.txt} documentan la instalación, las versiones
+directas observadas y la regeneración de la caché; no se versionan
+entornos, cachés, pesos de modelos ni archivos privados de la máquina.
+Tres pruebas nuevas verifican selección, identidad de caché sin modificar
+resultados y ejecución de una celda mínima con el intérprete correcto.
+La comprobación local del ejecutor no requirió repetir las corridas largas.
+
 \section{Puntos pendientes}
-El punto 2 está completo. Lo que falta, en orden (detalle en \texttt{TODO.md}):
+El punto 2 está implementado; su conformidad literal requiere resolver la
+variante de dimensión. Lo que falta, en orden (detalle en \texttt{TODO.md}):
 \begin{enumerate}
-\item Ejecutar el cuaderno completo desde un kernel limpio: las celdas del
-punto 2 se ejecutaron en un entorno aparte y no tienen salidas; la tabla
-exportada de pruebas sigue en 30/2/0 (\texttt{pytest} da 44/1/0) y la figura
-de F1 del 1.5 debe regenerarse con las etiquetas nuevas. La configuración
-borra las exportaciones; sin caché, la extracción de MPNet en CPU con un hilo
-tarda más de 10 minutos.
-\item Avisar al equipo que el detector usa 2 componentes y la regresión 384.
+\item Validar con el docente si acepta $D=2$ como variante del apartado 2.1.
+La referencia con $D=384$ ya tiene 30 corridas; la persona
+confirmó mantener la configuración vigente y no adoptar las alternativas.
+\item Avisar al equipo que el detector vigente usa 2 componentes y la
+regresión 384; las constantes no se cambiaron durante la auditoría.
 \item Punto 3: elegir modelos, prompt y tratamiento de respuestas ambiguas;
-LoRA o DoRA como extra. Sus tareas y pruebas no se eliminan.
+LoRA o DoRA como extra. Sus tareas y pruebas se conservan.
 \item Completar la comparación de métodos y las conclusiones del informe.
-\item Confirmar integrantes y fecha de entrega (el enunciado indica el 20
-de octubre); luego Doxygen, PDF final y \texttt{.zip}.
-\item Menor: llevar los diagramas de caja al estilo común de las gráficas.
+\item Confirmar integrantes y fecha de entrega; después, ejecución final
+completa, Doxygen, PDF final y \texttt{.zip}.
 \end{enumerate}
 
 \newpage
@@ -390,7 +510,7 @@ Confirmación del equipo; reemplaza MiniLM/384 y sus resultados.\\
 Aislar cada prueba y usar el ganador automáticamente.\\
 24/10/2026 & Conservar duplicados y documentar su limitación. & Mantener el
 dataset original y el protocolo por filas sin introducir otra evaluación.\\
-24/10/2026 & Fijar $D=384$ para el punto 2. & Decisión del equipo: mitad de
+24/10/2026 & Fijar inicialmente $D=384$ para el punto 2 (sustituida después por $D=2$). & Decisión del equipo: mitad de
 las características, 96.16\,\% de varianza descriptiva y F1 medio 0.9637
 frente a 0.9641 sin PCA; no implica equivalencia estadística.\\
 24/10/2026 & Densidades del punto 2 solo con ham del entrenamiento. &
@@ -404,6 +524,22 @@ spam resulta más verosímil que el ham (F1 0.04).\\
 24/10/2026 & 2.2: comparar el detector por partición con la regresión sin PCA
 y con $k=2$. & Separar el efecto de la dimensión del efecto del método, con
 las mismas semillas.\\
+24/10/2026 & Corregir la derivada de la sigmoide en cero y añadir una prueba. &
+Autograd daba 0 en vez de 1/4; se conserva el entrenamiento analítico.\\
+24/10/2026 & Auditar con caché local; conservar las configuraciones vigentes. &
+Autorización para 30 corridas por variante, sin descargas. Ampliar la
+regresión no mejoró F1; calibrar histogramas reduce falsas alarmas, pero
+aumenta el spam escapado.\\
+24/10/2026 & Registrar la diferencia entre $D=384$ literal y $D=2$ del equipo. &
+La mejor métrica no demuestra cumplimiento del enunciado; validar la
+variante con el docente.\\
+25/10/2026 & Conservar las configuraciones del equipo y compartir la reproducción. &
+Confirmación de la persona; las alternativas siguen documentadas sin
+adoptarse. Se incluye un ejecutor portátil, dependencias directas y guía;
+se excluyen cachés, modelos y entornos locales.\\
+25/10/2026 & Publicar la auditoría completa y seleccionar solo lo necesario para main. &
+Solicitud de la persona: notebook, Python, pruebas, fuentes LaTeX, PDF y
+sus dependencias; conservar la configuración vigente y continuar el punto 3.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -411,42 +547,40 @@ las mismas semillas.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest}: 44 pruebas superadas, 1 pendiente (3.1), 0
-fallidas, en terminal.  La celda de pruebas del cuaderno no se volvió a
-ejecutar en esta revisión. Incluye búsqueda vectorizada equivalente
-al entrenamiento individual, aislamiento de prueba, PCA interno y rechazo
-de cachés incompatibles.
-\item Cuaderno guardado validado con \texttt{nbformat}, IDs únicos y análisis
-sintáctico. Se conservan documentación Doxygen, sesgo y gradiente.
-\item Dataset contrastado con el original UCI. Características MPNet
-$(5574,768)$, finitas, \texttt{float32} y de norma 1. Las cuatro variantes
-completaron 30 corridas con semillas 2026--2055. Toda la evaluación UCI se
-completó antes de crear los datos sintéticos de 1.3.
-\item La inspección estática del IDE no resuelve algunos imports de pruebas
-y atributos del módulo cargado dinámicamente; su ejecución real y las pruebas
-los verifican. El informe preliminar también compila (21 páginas), con el
-punto 3 todavía pendiente.
-\item Punto 2.1 ejecutado con las características MPNet en caché (forma
-$(5574,768)$, misma revisión del codificador). Sus figuras y la tabla de
-selección se exportaron sin reejecutar el punto 1, cuyos resultados no
-cambiaron.
-\item Punto 2.2: 30 corridas del detector. Para compararlas por partición se
-volvieron a ejecutar las 120 corridas del punto~1 en Linux: sus tablas de
-métricas coinciden exactamente con las versionadas. Solo difieren en el
-séptimo decimal las pérdidas de calibración y, en la corrida 23 con $k=2$, un
-empate resuelto con 1000 épocas en vez de 2000, sin cambio en sus métricas.
-No se sobrescribieron los archivos del punto~1.
-\item La función compartida de diagramas de caja parte en dos líneas los
-nombres largos; la figura versionada del 1.5 conserva el formato anterior
-hasta la próxima ejecución completa.
-\item Figuras inspeccionadas visualmente y PDF compilado con
-\texttt{./build\_pdf.sh review}. La ejecución final y Doxygen siguen pendientes,
-al igual que el punto 3.
+\item \texttt{pytest} y celda de pruebas del notebook: 48 superadas,
+1 pendiente (3.1), 0 fallidas. La prueba nueva reprodujo el fallo antes
+ de la corrección y pasa después.
+\item Notebook guardado validado con \texttt{nbformat}, IDs únicos y AST.
+Las definiciones se cargan sin descargas ni experimentos. Se conservan
+sesgo, gradiente manual y contratos existentes.
+\item Dataset original sin modificaciones y caché MPNet verificada por
+metadatos, hash de textos ordenados, forma $(5574,768)$, tipo
+\texttt{float32} y finitud. La auditoría no descargó modelos.
+\item Ejecución desde un kernel nuevo de los puntos 1 y 2, auditoría adicional
+y pruebas, en 407 segundos. Se conservaron las salidas en una copia local
+ejecutada; el notebook del commit se limpia según las reglas de desarrollo;
+la celda opcional de auditoría quedó desactivada para futuras ejecuciones.
+La ejecución final completa sigue pendiente del punto 3.
+\item Las métricas de regresión reproducen exactamente las tablas anteriores.
+Las métricas del detector vigente también coinciden; hay diferencias
+numéricas pequeñas en umbrales y en validación con $D=384$ respecto de
+Linux (tasa de aciertos 0.7812 frente a 0.7810). Se registran los valores
+de esta ejecución sin atribuirlos a cambios de modelo.
+\item Las 18 figuras regeneradas e inspeccionadas se conservan en la rama
+de auditoría. Sus diagramas de caja usan dos líneas y medianas neutras;
+main conserva sus PNG previos. No se editaron figuras ni tablas
+experimentales a mano.
+\item Revisión e informe preliminar compilados mediante los dos comandos
+\texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
+de las páginas renderizadas.
+El punto 3, la comparación global y las
+conclusiones finales permanecen pendientes.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 
 Para reproducir, instalar \texttt{requirements.txt} y ejecutar las definiciones,
-configuración, datos y punto 1 completos del cuaderno. La configuración limpia
+configuración, datos y puntos 1 y 2 completos del cuaderno. La auditoría
+requiere activar su celda opcional; se debe autorizar esa ejecución larga. La configuración limpia
 las exportaciones: regenerar las figuras antes de compilar documentos que las usen.
 
 \end{document}

@@ -1,5 +1,9 @@
 # Entrega
 
+**Estado del PDF versionado:** preliminar de la auditoría de los puntos 1
+y 2. Falta el punto 3, la comparación global y las conclusiones finales;
+este archivo todavía no es la entrega final.
+
 Esta carpeta se reserva para las copias finales y verificadas de los archivos
 solicitados por TEC Digital. No trabajar directamente sobre esas copias.
 
