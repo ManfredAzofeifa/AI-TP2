@@ -101,6 +101,13 @@ cambios de orden o configuración se coordinan para evitar conflictos.
 
 ## Preparación del entorno
 
+Para reproducir la auditoría desde un clon nuevo, seguir
+[Reproducir la auditoría en otra computadora](docs/reproducibility.md):
+entorno virtual, versiones observadas, caché MPNet y ejecución parcial sin
+depender de PyCharm. El ejecutor compartido es `scripts/run_puntos_1_2.py`;
+`--check` valida la caché sin borrar resultados y `--audit` activa únicamente
+las alternativas documentadas, conservando las constantes del notebook.
+
 Se necesita Python 3.11 o superior; las versiones de `requirements.txt` son
 las validadas en el TP1 con Python 3.14. Los comandos usan el Python
 instalado en el sistema: `py` en Windows y `python3` en macOS y Linux. Abrir
@@ -234,7 +241,10 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 44 superadas, 1 pendiente y ninguna fallida.
+Las pruebas actuales dan 48 superadas, 1 pendiente y ninguna fallida.
+La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
+logit cero y distinguió la variante D=2 del detector de la D=384 solicitada
+por la lectura literal de 2.1. Esa interpretación debe validarse con el docente.
 
 ## Equipo
 

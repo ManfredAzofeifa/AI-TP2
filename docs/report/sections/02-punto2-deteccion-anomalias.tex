@@ -37,12 +37,29 @@ umbral $\tau$ se marca como fuera de la distribución, es decir, como spam.
 
 \paragraph{Elección de $D$.} El enunciado pide usar la $D$ óptima deducida en
 el apartado anterior. En 1.5 se compararon 384, 192 y 2 componentes, y 384
-fue la mejor para la regresión logística (Sección~\ref{sec:punto1}). Ese
+fue el compromiso adoptado para la regresión logística (Sección~\ref{sec:punto1}). Ese
 óptimo depende del modelo, así que los mismos tres casos se compararon con el
-detector de histogramas, sin usar ningún conjunto de prueba. En cada una de
+detector de histogramas en las validaciones internas. En cada una de
 las 30 particiones se separó la validación interna de 1.4 (20~\% estratificado
 del entrenamiento). Con el resto se ajustaron el PCA y el detector, y este se
 evaluó en la validación. La Tabla~\ref{tab:seleccion-d} resume el resultado.
+
+\paragraph{Alcance frente al enunciado.} Usar $D=2$ es una decisión del
+equipo que favorece al detector, pero difiere de reutilizar $D=384$, la
+dimensión adoptada en 1.5. Queda pendiente acordar con el docente si se acepta
+esa variante. La auditoría adicional conserva ambos casos para hacer visible
+la diferencia; las métricas de $D=2$ no sustituyen las de $D=384$.
+
+\paragraph{Alcance de la selección.} Cada validación excluye la prueba de
+su propia corrida, pero las particiones se solapan: una fila de prueba puede
+participar en la validación de otra corrida. Por ello agregar las 30
+validaciones para decidir una única $D$ no aísla globalmente las 30 pruebas
+de esa decisión. Aquí $D=2$ gana en todas las validaciones, de modo que elegir
+$D$ separadamente en cada corrida da la misma dimensión observada. Esto no
+demuestra ausencia de sesgo de desarrollo ni equivalencia con datos nuevos.
+Las densidades se ajustan con ham; la selección de $D$ por F1 sí usa etiquetas
+de spam de entrenamiento. El procedimiento completo no es enteramente
+no supervisado.
 
 \begin{table}[H]
     \centering
@@ -55,7 +72,7 @@ evaluó en la validación. La Tabla~\ref{tab:seleccion-d} resume el resultado.
         \toprule
         $D$ & Tasa de aciertos & F1-score & Spam detectado & Ham marcado & Gana \\
         \midrule
-        384 & $0.7810\pm0.0140$ & $0.0401\pm0.0193$ & 3.4~\% & 10.3~\% & 0 \\
+        384 & $0.7812\pm0.0141$ & $0.0401\pm0.0193$ & 3.4~\% & 10.3~\% & 0 \\
         192 & $0.8425\pm0.0072$ & $0.0237\pm0.0191$ & 1.4~\% & 2.9~\% & 0 \\
         2 & $0.9201\pm0.0106$ & $0.7085\pm0.0318$ & 72.1~\% & 4.9~\% & 30 \\
         \bottomrule
@@ -75,8 +92,9 @@ con 2, se vuelve negativa desde 169, vale $-2.8$ con 192 y $-41.1$ con 384.
 Al sumar cientos de componentes poco informativas, sus aportes pequeños pero
 sistemáticos superan la señal de las primeras y el spam termina pareciendo
 más normal que el ham. La suma alcanza su máximo, 14.2, con 11 componentes;
-ese valor no se consideró porque el enunciado limita la elección a las
-dimensiones deducidas en 1.5.
+ese valor no se consideró porque el equipo restringió sus candidatos a los
+tres casos ensayados en 1.5. El enunciado no prescribe esa cuadrícula de
+búsqueda para el detector: pide reutilizar la dimensión óptima anterior.
 
 \begin{figure}[H]
     \centering
@@ -101,7 +119,9 @@ entrenamiento, 2703 construyen los histogramas y 676 fijan el umbral, que
 queda en $\tau=-0.8334$. Ambas componentes son unimodales, con la mayor parte
 de la masa entre $-0.2$ y $0.3$ y colas hacia valores negativos; no son
 exactamente simétricas ni gaussianas. Con unos 2700 ham por componente, los
-30 intervalos tienen datos suficientes para que la forma sea estable.
+30 intervalos describen la forma observada, aunque las colas pueden tener
+intervalos escasos o vacíos; el tamaño total no garantiza estabilidad en
+cada intervalo.
 
 \begin{figure}[H]
     \centering
@@ -186,16 +206,18 @@ F1 de todos los métodos.
     \label{fig:punto22-f1}
 \end{figure}
 
-\paragraph{La validación anticipó el resultado.} El F1 en la validación
+\paragraph{Validación y prueba.} El F1 en la validación
 interna con la que se eligió $D$ fue $0.7085\pm0.0318$ y en la prueba es
-$0.7043\pm0.0247$: elegir 2 componentes no sobreestimó el desempeño.
+$0.7043\pm0.0247$. La cercanía es descriptiva y no prueba que la selección
+no sobreestime el desempeño.
 
 \paragraph{Con la misma información, la diferencia está en el ham.} Frente a
 la regresión con 2 componentes, el detector encuentra casi la misma fracción
-de spam (71.4~\% contra 72.6~\%). El spam que se escapa es, en ambos casos, el
-que se mezcla con el ham en el plano (Figura~\ref{fig:region}). La diferencia
+de spam (71.4~\% contra 72.6~\%). La figura muestra spam mezclado con ham
+en el plano (Figura~\ref{fig:region}); los conteos agregados no permiten
+afirmar que ambos métodos fallen sobre los mismos mensajes. La diferencia
 son los falsos positivos: 70.5 ham marcados por prueba (4.9~\%) contra 27.9
-(1.9~\%). El umbral acepta por diseño marcar el 5~\% de los ham, y el
+(1.9~\%). El umbral apunta al 5~\% de los ham de calibración, y el
 detector, que nunca ve spam, marca los ham poco frecuentes en cualquier
 dirección. La regresión conoce dónde está el spam y solo marca hacia ese
 lado. Por eso la precisión del detector es de 0.70.
@@ -225,6 +247,51 @@ fijado.
 
 \paragraph{Conclusión.} El detector no supera a la regresión logística en
 ninguna partición. Su ventaja es otra: se entrena sin ejemplos de spam y
-controla de forma explícita cuántos mensajes normales se marcan, lo que
+permite fijar una fracción objetivo de ham marcado en la calibración, lo que
 sería útil si no hubiera spam etiquetado. Con etiquetas disponibles, como en
 este dataset, el modelo supervisado es claramente mejor.
+El cuantil empírico no garantiza el mismo porcentaje en datos futuros; los
+empates, el tamaño de la reserva y los cambios de distribución lo afectan.
+
+\subsection{Auditoría de dimensión, intervalos y cuantil}
+Se ejecutaron otras 30 corridas por variante, con las mismas semillas.
+La referencia $D=384$ usa los 30 intervalos y el cuantil 5~\% vigentes.
+La alternativa calibrada elige, dentro del entrenamiento de cada corrida,
+$D\in\{384,192,2\}$, intervalos $\{15,30,60\}$ y cuantiles
+$\{0.01,0.025,0.05,0.1\}$. Se maximiza el F1 de validación; los empates
+se resuelven por mayor tasa de aciertos y después menor dimensión, número
+de intervalos y cuantil. El PCA interno excluye la validación; el PCA final
+y las densidades excluyen la prueba. La Tabla~\ref{tab:auditoria-detector}
+presenta medias y desviaciones entre las 30 particiones.
+
+\begin{table}[H]
+    \centering
+    \caption{Referencias y alternativa del detector. Los errores son
+    promedios por prueba; las constantes oficiales permanecen sin cambios.}
+    \label{tab:auditoria-detector}
+    \small
+    \begin{tabular}{lcccc}
+        \toprule
+        Variante & Tasa de aciertos & F1 & Ham marcado & Spam escapado \\
+        \midrule
+        $D=384$, referencia & $0.7892\pm0.0119$ & $0.0386\pm0.0145$ & 135.5 & 216.9 \\
+        $D=2$, vigente & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 64.0 \\
+        Calibrada por corrida & $0.9321\pm0.0061$ & $0.7173\pm0.0441$ & 35.4 & 78.1 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+La alternativa elige $D=2$ en las 30 corridas. Elige cuantil 1~\% o
+2.5~\% en 27 y 5~\% en 3; no conserva siempre la fracción objetivo
+vigente. Su F1 mejora en 24 corridas y empeora en 6, con diferencia pareada
+$+0.0130\pm0.0519$. Reduce aproximadamente a la mitad los falsos positivos,
+pero deja escapar 14.1 spam más por prueba y aumenta la dispersión de F1.
+El F1 medio de validación es 0.7480 frente a 0.7173 en prueba: ampliar la
+selección también puede sobreajustar una validación finita. No se adopta
+automáticamente: el equipo debe decidir si acepta ese intercambio y el uso
+de etiquetas de validación para elegir intervalos y cuantil.
+
+La referencia $D=384$ hace explícito el resultado de reutilizar la dimensión
+de 1.5, aun cuando sea desfavorable. Las alternativas se investigaron después
+de conocer resultados previos de este dataset: son evidencia exploratoria,
+no una validación independiente ni una garantía de mejora en mensajes nuevos.

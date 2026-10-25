@@ -2,7 +2,7 @@
 
 - `raw/SMSSpamCollection`: el dataset SMS Spam Collection de UCI, versionado
   para que todo el equipo use el mismo archivo. Si falta, el notebook lo
-  descarga del repositorio UCI (`utils.download_sms_spam`). Tiene 5 574
+  descarga del repositorio UCI (`download_sms_spam`). Tiene 5 574
   mensajes (4 827 ham y 747 spam), una línea por mensaje: etiqueta, tabulador
   y texto. No editarlo a mano.
 - `processed/`: cachés regenerables, como las características del codificador

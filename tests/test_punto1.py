@@ -73,6 +73,19 @@ def test_forward_matches_sigmoid_and_is_stable():
     assert torch.isfinite(weights.grad).all()
 
 
+def test_forward_gradient_at_zero_matches_sigmoid_derivative():
+    """!
+    @brief Verifica que Autograd conserve la derivada 1/4 cuando el logit es cero.
+    @return None.
+    """
+    X = torch.tensor([[2.0, -1.0]])
+    weights = torch.zeros(2, requires_grad=True)
+    bias = torch.tensor(0.0, requires_grad=True)
+    punto1.forward(X, weights, bias).sum().backward()
+    torch.testing.assert_close(weights.grad, X[0] / 4)
+    torch.testing.assert_close(bias.grad, torch.tensor(0.25))
+
+
 # ---------------------------------------------------------------------------
 # 1.2a: pruebas de train_logistic_regression (obligatorias)
 # ---------------------------------------------------------------------------
