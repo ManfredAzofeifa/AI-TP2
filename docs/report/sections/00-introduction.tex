@@ -19,8 +19,8 @@ La implementación completa vive en el notebook
 \texttt{tp2\_detector\_spam.ipynb}, organizado en celdas de definiciones,
 configuración, experimentos y análisis. Las pruebas externas cargan las
 mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
-figuras y tablas provienen de la ejecución completa de sus secciones; los
-puntos 2 y 3 siguen pendientes de implementación.
+figuras y tablas provienen de la ejecución completa de sus secciones; el
+punto 3 sigue pendiente de implementación.
 
 \subsection{Protocolo común}
 
@@ -37,9 +37,12 @@ puntos 2 y 3 siguen pendientes de implementación.
     \item \textbf{Hiperparámetros de la regresión logística.} Calibrados por
     F1 en una validación interna de cada corrida, tomada solo de su entrenamiento
     (Sección~\ref{sec:calibracion}).
-    \item \textbf{Dimensión para el detector de anomalías.} El equipo confirmó
-    $D=384$ el 24 de octubre de 2026, la mitad de las 768 características;
-    se utilizarán 384 histogramas, uno por componente (Sección~\ref{sec:punto2}).
-    \item TODO: decisiones pendientes del equipo (umbral y
-    modelos de lenguaje).
+    \item \textbf{Dimensión óptima del PCA.} El equipo confirmó $D=384$ el
+    24 de octubre de 2026 para la regresión logística, la mitad de las 768
+    características (Sección~\ref{sec:pca}).
+    \item \textbf{Detector de anomalías.} Entre los casos de 1.5, el detector
+    de histogramas usa $D=2$, elegida en una validación interna de los 30
+    entrenamientos; las densidades se construyen solo con ham y el umbral es
+    el cuantil 5~\% de un 20~\% de ham reservado (Sección~\ref{sec:punto2}).
+    \item TODO: decisiones pendientes del equipo (modelos de lenguaje).
 \end{itemize}

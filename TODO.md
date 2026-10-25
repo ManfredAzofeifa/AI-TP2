@@ -32,14 +32,65 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   por método. F1 sin PCA 0.9641 ± 0.0063; con 384 componentes 0.9637 ±
   0.0075; con 192, 0.9596 ± 0.0082; con 2, 0.7845 ± 0.0189.
   Tasa de aciertos sin PCA 0.9906 ± 0.0016.
-- **D óptima confirmada (24/10/2026):** `OPTIMAL_PCA_DIMENSIONS = 384`;
-  reduce a la mitad las 768 características y fija 384 histogramas para 2.1.
+- **D óptima confirmada (24/10/2026):** `OPTIMAL_PCA_DIMENSIONS = 384`
+  para la regresión logística; reduce a la mitad las 768 características.
   Conserva 96.16 % de varianza descriptiva y F1 0.9637 frente a 0.9641 sin
   PCA, con diferencia media pareada −0.0004; no es prueba de equivalencia.
-- **Pendiente:** punto 2 y punto 3.
-- **Pruebas verificadas:** 30 superadas, 2 pendientes (2.1 y 3.1), 0 fallidas.
+- **2.1 implementado (24/10/2026):** densidades solo con ham del
+  entrenamiento, 30 intervalos, umbral en el cuantil 5 % de un 20 % de ham
+  reservado. El detector usa `ANOMALY_PCA_DIMENSIONS = 2`: entre los casos
+  de 1.5, en la validación interna de los 30 entrenamientos 2 componentes
+  dan F1 0.7085 ± 0.0318 y ganan en las 30; con 384, F1 0.0401 (el spam
+  resulta más verosímil que el ham en 330 de 384 componentes).
+- **2.2 completo (24/10/2026):** en las mismas 30 particiones, el detector
+  obtiene tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247; su F1 es
+  menor que el de la regresión sin PCA (−0.2597) y que el de la regresión con
+  k = 2 (−0.0802) en las 30 corridas. Detecta casi el mismo spam que la
+  regresión con k = 2, pero marca más ham (4.9 % contra 1.9 %).
+- **Pendiente:** punto 3.
+- **Pruebas verificadas:** 44 superadas, 1 pendiente (3.1), 0 fallidas.
   Las 120 corridas UCI se completaron sin ejecutar previamente 1.3.
 - **Revisión interna:** `docs/report/review.tex` y su PDF se actualizan juntos.
+
+## Próximos pasos (24/10/2026)
+
+Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
+
+1. **Ejecutar el notebook completo desde un kernel limpio.** El punto 2 se
+   ejecutó en un entorno aparte, así que sus celdas no tienen salidas en el
+   notebook. La ejecución completa debe:
+   - mostrar las salidas del 2.1 y el 2.2 dentro del notebook;
+   - regenerar `results/tables/resultado-de-las-pruebas-unitarias.csv`, que
+     todavía dice 30 superadas y 2 pendientes (`pytest` da 44 superadas y 1
+     pendiente);
+   - regenerar la figura de F1 del 1.5 con las etiquetas en dos líneas.
+
+   La celda de configuración borra `results/figures/` y `results/tables/`: no
+   detener la ejecución a medias. Mientras falte el punto 3, se detiene en su
+   primer `NotImplementedError`, después del punto 2. La primera vez descarga
+   MPNet (unos 420 MB) y codifica los 5 574 mensajes en CPU con un hilo
+   (`torch.set_num_threads(1)`), lo que puede tardar más de 10 minutos; luego
+   usa la caché de `data/processed/`. Las 120 corridas del punto 1 tardaron
+   unos 7 minutos en Linux.
+2. **Avisar a todo el equipo** que el detector del punto 2 usa
+   `ANOMALY_PCA_DIMENSIONS = 2` y no 384; la regresión conserva
+   `OPTIMAL_PCA_DIMENSIONS = 384`.
+3. **Punto 3 (10 puntos + 20 extra).** Primero decidir en equipo
+   `LLM_MODELS`, el prompt y el tratamiento de respuestas ambiguas (ver
+   [Decisiones pendientes](#decisiones-pendientes-del-equipo)); después
+   implementar 3.1 y, si hay tiempo, 3.2 y 3.3.
+4. **Informe:** completar `05-comparison.tex` (todos los métodos) y
+   `06-conclusions.tex`, y el resumen de conclusiones al final del notebook.
+   Dependen del punto 3.
+5. **Confirmar los integrantes** (se copiaron del TP1) y la **fecha de
+   entrega**: el enunciado dice martes 20 de octubre y este registro es del
+   24; si hay prórroga, corregirla aquí, en `AGENTS.md` y en `README.md`.
+6. **Cierre:** generar Doxygen, el PDF final con `./build_pdf.sh` y el `.zip`
+   ([Checklist de entrega](#checklist-de-entrega)).
+7. **Menor:** `plot_metric_distributions` (diagramas de caja de 1.5 y 2.2)
+   usa el estilo por defecto de matplotlib, con la mediana en naranja (el
+   color del spam). Pasarla al estilo común (`_style_axis`, mediana en tinta
+   neutra) antes de la ejecución final.
 
 ## Cómo trabajar
 
@@ -145,7 +196,7 @@ archivo, sus pruebas y las celdas del notebook que lo usan.
   y regenera su contenido en cada ejecución.
 - Toda métrica, tabla o figura experimental del informe proviene de la
   ejecución completa de su sección; la ejecución final de todo el notebook
-  espera a los puntos 2 y 3.
+  espera al punto 3.
 
 ## Decisiones pendientes del equipo
 
@@ -162,9 +213,13 @@ sección "Objetivo y protocolo" del notebook y en el informe.
       basada en MPNet/768; reduce a la mitad las características, conserva
       96.16 % de varianza descriptiva y F1 medio 0.9637 frente a 0.9641 sin
       PCA (diferencia pareada −0.0004). No implica equivalencia estadística.
-- [ ] Datos con los que se construyen las densidades (2.1): solo ham del
-      entrenamiento (lo que hace hoy el notebook) o todo el entrenamiento.
-- [ ] Criterio del umbral (2.1) y `HISTOGRAM_BINS`.
+- [x] Datos de las densidades (2.1, 24/10/2026): solo ham del entrenamiento.
+- [x] Umbral (2.1, 24/10/2026): cuantil 5 % (`ANOMALY_THRESHOLD_QUANTILE`) de
+      los puntajes de un 20 % de ham reservado (`ANOMALY_THRESHOLD_FRACTION`);
+      `HISTOGRAM_BINS = 30`.
+- [x] Dimensión del detector (2.1, 24/10/2026): `ANOMALY_PCA_DIMENSIONS = 2`,
+      el mejor de los casos de 1.5 en validación interna; la regresión
+      conserva `OPTIMAL_PCA_DIMENSIONS = 384`. Avisar al resto del equipo.
 - [ ] `LLM_MODELS` (3.1, al menos uno; 3.2 extra, al menos dos más), el
       prompt y qué hacer con respuestas ambiguas. Son 5 574 mensajes por
       modelo; preferir modelos que corran en las computadoras del equipo.
@@ -216,21 +271,21 @@ Es la ruta crítica: el punto 2 necesita sus características (1.4) y su PCA
 
 ## Punto 2 - sección 2 del notebook (30 puntos)
 
-Ya implementada: `predict_anomalies` (puntaje menor que el umbral = spam). Se
-puede programar y probar desde ya con tensores sintéticos; para ejecutarlo en
-el notebook necesita las características (1.4), `fit_pca` y `transform_pca`
-(1.5) y `OPTIMAL_PCA_DIMENSIONS = 384`, ya confirmada. Se estimarán
-384 histogramas, uno por componente; la implementación y evaluación del
-punto 2 siguen pendientes.
+Usa las características (1.4), `fit_pca` y `transform_pca` (1.5). El
+detector trabaja con `ANOMALY_PCA_DIMENSIONS = 2` componentes, elegidas entre
+los casos de 1.5 con la validación interna de los 30 entrenamientos.
 
-- [ ] **2.1 (20)** `fit_histogram_densities`, `log_likelihood`,
-      `select_threshold`, `plot_densities` y `plot_score_distribution`.
-      Graficar y comentar las densidades; definir el umbral sobre la suma de
-      verosimilitudes de todas las densidades.
-  - [ ] Recomendada: `test_histogram_densities_integrate_to_one`.
-- [ ] **2.2 (10)** 30 corridas 70/30 (la celda ya está en el notebook);
-      reportar y comentar frente a los resultados del punto 1.
-- [ ] Informe: `02-punto2-deteccion-anomalias.tex`.
+- [x] **2.1 (20)** `fit_histogram_densities`, `per_dimension_log_likelihood`,
+      `log_likelihood`, `select_threshold`, `fit_anomaly_detector`,
+      `detector_metrics`, `evaluate_detector_dimensions`,
+      `component_log_likelihood_gap` y cuatro gráficas. Selección de D,
+      densidades, puntajes, región normal y análisis (24/10/2026).
+  - [x] 15 pruebas en `tests/test_punto2.py`, incluida
+        `test_histogram_densities_integrate_to_one`.
+- [x] **2.2 (10)** 30 corridas 70/30 con las particiones del punto 1;
+      tablas de métricas, errores por clase, diferencias pareadas frente a la
+      regresión sin PCA y con k = 2, dos diagramas de caja y análisis.
+- [x] Informe: `02-punto2-deteccion-anomalias.tex` (2.1 y 2.2).
 
 ## Punto 3 - sección 3 del notebook (10 puntos y 20 extra)
 
@@ -273,17 +328,28 @@ Registro de verificaciones realizadas y trabajo pendiente:
 - [x] LaTeX instalado (MiKTeX, con `latexmk`) y `review.tex` compilado en
       `docs/report/review.pdf`.
 - [x] El informe (`main.tex`) compila: 17 páginas, sin citas sin resolver
-      ni líneas fuera del margen en la pasada final (24/10/2026); es una
-      versión preliminar porque los puntos 2 y 3 siguen pendientes.
+      ni líneas fuera del margen en la pasada final (24/10/2026); con el
+      punto 2 son 23 páginas. Es preliminar: falta el punto 3.
 - [ ] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
       entrega, con todos los puntos terminados.
 - [x] Migración del notebook: `nbformat`, IDs únicos y AST válidos;
       pruebas externas sobre las mismas definiciones, 30 superadas y 2 pendientes.
-- [x] Celda de pruebas del notebook: 30 superadas, 2 pendientes y 0 fallidas.
+- [x] Celda de pruebas del notebook (antes del punto 2): 30 superadas, 2
+      pendientes y 0 fallidas.
       La inspección estática del IDE no resuelve algunos imports de tests y
       atributos del módulo dinámico; la ejecución real los verifica.
 - [x] MPNet con forma (5574, 768), vectores finitos de norma 1; 30 corridas
       por método (sin PCA y k=384/192/2), semillas 2026 a 2055.
+- [x] 2.1 ejecutado con la caché MPNet (misma revisión) en otra máquina; sus
+      figuras y la tabla de selección se exportaron sin reejecutar el punto 1.
+- [x] 2.2 ejecutado junto con las 120 corridas del punto 1 en Linux: las
+      tablas de métricas del punto 1 coinciden exactamente con las versionadas
+      (solo cambian pérdidas de calibración en el séptimo decimal y un empate
+      de épocas en la corrida 23 con k = 2, sin cambio de métricas). No se
+      sobrescribieron los archivos del punto 1.
+- [ ] Volver a ejecutar la celda de pruebas del notebook (ahora 44/1/0 en
+      pytest) y el notebook completo desde un kernel limpio; regenera la
+      figura de F1 del 1.5 con las etiquetas en dos líneas.
 - [ ] Generación de Doxygen (no estaba instalado).
 
 ## Checklist de entrega

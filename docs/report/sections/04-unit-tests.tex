@@ -16,9 +16,8 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} dio 30 pruebas superadas,
-2 pendientes y ninguna fallida; las dos pendientes corresponden a los
-puntos 2 y 3.
+dupliquen. La última ejecución de \texttt{pytest} dio 44 pruebas superadas,
+1 pendiente y ninguna fallida; la pendiente corresponde al punto 3.1.
 
 \subsection{Evaluación del modelo}
 
@@ -115,3 +114,30 @@ tensores pequeños y reproducibles, sin descargar modelos ni datos:
     \item Rechazan cachés antiguas o incompatibles por orden de los textos,
     identificador o revisión del modelo, forma, tipo o valores no finitos.
 \end{enumerate}
+
+\subsection{Detector de anomalías (punto 2.1)}
+
+Las quince pruebas de \path{tests/test_punto2.py} usan
+tensores pequeños construidos a mano:
+
+\begin{itemize}
+    \item \textbf{Histogramas.} Cada densidad integra 1; los bordes internos
+    pertenecen al intervalo de la derecha y el máximo se cuenta en el último;
+    una columna constante recibe un soporte de ancho positivo y puntajes
+    finitos.
+    \item \textbf{Verosimilitud.} El puntaje es la suma de los logaritmos de
+    las densidades marginales y coincide con la suma de los términos por
+    dimensión; los intervalos vacíos y los valores fuera del soporte, por
+    ambos lados, usan la densidad mínima sin recortar los valores.
+    \item \textbf{Umbral.} El cuantil se interpola linealmente; con empates,
+    la regla estricta puede marcar menos de la fracción pedida. El detector
+    construye los histogramas y fija el umbral con filas normales disjuntas,
+    y es reproducible con la misma semilla.
+    \item \textbf{Selección y diagnóstico.} Cada candidato usa sus primeras
+    $k$ columnas; cambiar el spam de ajuste no cambia el detector, porque
+    solo los ham construyen las densidades. La brecha por componente es
+    positiva donde el spam cae en zonas de baja densidad.
+    \item \textbf{Validaciones y figuras.} Se rechazan datos vacíos, mal
+    formados o no finitos, cantidades de intervalos y cuantiles inválidos; las
+    cuatro figuras devuelven su título como \texttt{suptitle}.
+\end{itemize}

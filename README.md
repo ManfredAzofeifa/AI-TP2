@@ -55,7 +55,7 @@ AI-TP2/
 | Punto | Sección del notebook | Pruebas | Sección del informe | Estado |
 |---|---|---|---|---|
 | 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
-| 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | pendiente |
+| 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | 2.1 y 2.2 listos; detector con D = 2 |
 | 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
 | Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
@@ -89,8 +89,13 @@ cambios de orden o configuración se coordinan para evitar conflictos.
   a la mitad las 768 características y conserva 96.16 % de varianza en el
   PCA descriptivo. El F1 medio es 0.9637 frente a 0.9641 sin PCA, con una
   diferencia pareada de −0.0004; esto no constituye una prueba de equivalencia
-  estadística. El punto 2 usará 384 histogramas, uno por componente; su
-  implementación y evaluación siguen pendientes.
+  estadística. Es la D de la regresión logística.
+- El detector de anomalías (2.1) usa 2 componentes (`ANOMALY_PCA_DIMENSIONS`),
+  el mejor de los casos de 1.5 en una validación interna de los 30
+  entrenamientos: con 384, el spam resulta más verosímil que el ham. Las
+  densidades se construyen solo con ham y el umbral sale de ham reservado.
+  En 30 corridas (2.2) obtiene F1 0.7043, frente a 0.9641 de la regresión
+  sin PCA.
 - El punto 3 solo usa los textos originales y las funciones compartidas: es independiente.
 - El punto 1 vale 60 puntos y es la ruta crítica.
 
@@ -229,7 +234,7 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 30 superadas, 2 pendientes y ninguna fallida.
+Las pruebas actuales dan 44 superadas, 1 pendiente y ninguna fallida.
 
 ## Equipo
 

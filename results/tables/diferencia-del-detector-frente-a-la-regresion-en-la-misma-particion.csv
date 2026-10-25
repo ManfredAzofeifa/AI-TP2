@@ -1,0 +1,3 @@
+,diferencia media de tasa de aciertos,diferencia media de F1,desviación de la diferencia de F1,corridas con F1 menor
+detector − RL (D = 768),-0.0710127591706539,-0.2597406194294828,0.025333586962367035,30.0
+detector − RL + PCA k = 2,-0.027073365231259958,-0.08018532417203947,0.021170780738771936,30.0

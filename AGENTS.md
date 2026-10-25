@@ -62,18 +62,50 @@ verificación pendiente de `TODO.md`.
   la mitad de las 768 características. Conserva 96.16 % de varianza en el
   PCA descriptivo y F1 medio 0.9637 frente a 0.9641 sin PCA (diferencia
   pareada −0.0004); esta cercanía no prueba equivalencia estadística.
-  El punto 2 trabajará con 384 histogramas, uno por componente.
-- **Pendiente:** puntos 2 y 3.
-- **Pruebas verificadas:** 30 superadas, 2 pendientes (2.1 y 3.1), 0 fallidas.
+  Es la D de la regresión logística.
+- **2.1 implementado (24/10/2026):** densidades solo con ham del
+  entrenamiento, 30 intervalos y umbral en el cuantil 5 % de un 20 % de ham
+  reservado (`fit_anomaly_detector`). El detector usa
+  `ANOMALY_PCA_DIMENSIONS = 2`, decisión del equipo: entre los casos de 1.5,
+  gana en la validación interna de los 30 entrenamientos (F1 0.7085 frente
+  a 0.0401 con 384, donde el spam resulta más verosímil que el ham).
+- **2.2 completo (24/10/2026):** 30 corridas con las particiones del punto 1;
+  tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247, menor que la
+  regresión sin PCA (F1 −0.2597) y con k = 2 (−0.0802) en las 30 corridas.
+- **Pendiente:** punto 3.
+- **Pruebas verificadas:** 44 superadas, 1 pendiente (3.1), 0 fallidas.
   Las 120 corridas UCI se ejecutaron antes de crear los datos sintéticos de 1.3.
-  La celda de pruebas también dio 30/2/0. El IDE no resuelve estáticamente
+  La celda de pruebas del notebook dio 30/2/0 antes del 2.1; falta repetirla. El IDE no resuelve estáticamente
   algunos imports de tests y atributos del módulo cargado dinámicamente;
   su ejecución real y pytest pasan. Revisión PDF compilada; informe preliminar
-  de 17 páginas también compila, con puntos 2 y 3 pendientes.
+  de 23 páginas también compila, con el punto 3 pendiente.
+
+## Próximos pasos
+
+Lista completa y notas de ejecución en
+[TODO.md](TODO.md#próximos-pasos-24102026). Resumen para agentes:
+
+1. Ejecutar el notebook completo desde un kernel limpio. Las celdas del punto
+   2 no tienen salidas (se ejecutaron aparte), y
+   `results/tables/resultado-de-las-pruebas-unitarias.csv` sigue en 30/2/0.
+   La configuración borra `results/`: no detenerla a medias. Sin caché, la
+   extracción de MPNet en CPU con un hilo tarda más de 10 minutos; pedir
+   confirmación antes de descargar o ejecutar corridas largas.
+2. Recordar a la persona que avise al equipo: el detector usa
+   `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
+3. Punto 3: no elegir `LLM_MODELS`, prompt ni LoRA/DoRA sin confirmación del
+   equipo; proponer opciones.
+4. Informe: `05-comparison.tex`, `06-conclusions.tex` y resumen final del
+   notebook, después del punto 3.
+5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y
+   el registro es del 24/10/2026); después, Doxygen, PDF final y `.zip`.
+6. Menor: llevar `plot_metric_distributions` al estilo común de las gráficas
+   (hoy usa el de matplotlib, con la mediana en naranja).
 
 ## Antes de modificar
 
-1. Leer este archivo, `TODO.md`, `README.md` y el apartado del enunciado.
+1. Leer este archivo (incluidos los [próximos pasos](#próximos-pasos)),
+   `TODO.md`, `README.md` y el apartado del enunciado.
 2. Respetar el alcance indicado por la persona; aclarar solo lo que quede ambiguo.
 3. Ejecutar `py -m pytest` (Windows) o `python3 -m pytest` y comparar con el
    [estado actual](#estado-actual).
@@ -135,8 +167,11 @@ verificación pendiente de `TODO.md`.
 - 1.5: 50 %, 25 % y 2 dimensiones (384, 192 y 2 con D=768); PCA se
   ajusta solo con ajuste interno al calibrar y con entrenamiento al evaluar.
   Comparar con el caso sin PCA usando las mismas particiones y semillas.
-- 2.1: usar `OPTIMAL_PCA_DIMENSIONS = 384`, confirmada por el equipo
-  a partir de 1.5; ajustar el PCA solo con el entrenamiento de cada corrida.
+- 2.1 y 2.2: el detector usa `ANOMALY_PCA_DIMENSIONS = 2`, elegida por el
+  equipo entre los casos de 1.5 con validación interna; ajustar el PCA solo
+  con el entrenamiento de cada corrida, las densidades solo con sus ham y el
+  umbral con ham reservado de ese entrenamiento. La regresión conserva
+  `OPTIMAL_PCA_DIMENSIONS = 384`.
 - 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
 - Métricas: tasa de aciertos y F1-score.
 
@@ -194,14 +229,14 @@ verificación pendiente de `TODO.md`.
 
 ## Límites
 
-- No tomar las decisiones pendientes del equipo (umbral, modelos
+- No tomar las decisiones pendientes del equipo (modelos
   de lenguaje, LoRA o DoRA; lista en `TODO.md`): proponer opciones y esperar
   confirmación.
 - No descargar modelos grandes ni ejecutar inferencias largas sin
   confirmación.
 - No inventar ni estimar resultados: toda métrica, tabla o figura experimental
   del informe sale de la ejecución completa de su sección. La ejecución final
-  completa queda pendiente mientras los puntos 2 y 3 no estén implementados.
+  completa queda pendiente mientras el punto 3 no esté implementado.
 - Las cachés identifican dataset, codificador y configuración; validar forma
   `(5574, 768)` y finitud antes de usar características. El archivo UCI se
   conserva íntegro; sus textos repetidos son una limitación de la partición por filas.

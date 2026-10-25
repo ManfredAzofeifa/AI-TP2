@@ -22,7 +22,10 @@ cuaderno, la auditoría del dataset, el modelo con sesgo y la evaluación de
 regresión logística con y sin PCA. Los resultados anteriores de MiniLM con
 384 características no describen el nuevo codificador MPNet con 768 ni el
 protocolo de validación corregido. Se completaron 30 corridas por cada una
-de las cuatro variantes de regresión con MPNet. Este documento se mantiene junto con
+de las cuatro variantes de regresión con MPNet. El punto 2 está completo:
+el detector de histogramas usa 2 componentes, elegidas en validación interna
+porque con 384 el spam resulta más verosímil que el ham. En 30 corridas
+obtiene F1 0.7043, frente a 0.9641 de la regresión sin PCA. Este documento se mantiene junto con
 \texttt{TODO.md}, \texttt{AGENTS.md} y su PDF compilado.
 \end{abstract}
 \tableofcontents
@@ -234,20 +237,133 @@ de 2026. Se reduce a la mitad la dimensión inicial de MPNet y se conserva
 el 96.16\,\% de la varianza descriptiva. El F1 medio es 0.9637 frente a
 0.9641 sin PCA, con diferencia media pareada de $-0.0004$. Esta cercanía
 no demuestra equivalencia estadística; se adopta como compromiso entre
-reducción y clasificación observada. El punto 2 usará 384 histogramas,
-uno por componente. La decisión se basa en MPNet/768 y no en las
-recomendaciones anteriores de MiniLM/384.
+reducción y clasificación observada para la regresión logística. La decisión
+se basa en MPNet/768 y no en las recomendaciones anteriores de MiniLM/384.
+El detector del punto 2 compara estos mismos casos con su propia validación
+(Sección~\ref{sec:review-punto21}).
 % FIN_RESULTADOS_15
 
+\section{Punto 2.1: densidades por histograma y umbral}
+\label{sec:review-punto21}
+\paragraph{Lógica.} En cada partición se ajusta un PCA solo con el
+entrenamiento. Por componente se estima un histograma de 30 intervalos de
+igual ancho entre el mínimo y el máximo de los datos, normalizado para que
+integre 1. El puntaje es $\sum_d\log p_d(x_d)$; un valor en un intervalo vacío
+o fuera del soporte recibe $\varepsilon=10^{-12}$ ($\log\varepsilon\approx-27.6$)
+sin recortar el dato. Un puntaje menor que el umbral marca spam.
+
+\paragraph{Pasos.}
+\begin{enumerate}
+\item Se implementaron \texttt{fit\_histogram\_densities},
+\texttt{per\_dimension\_log\_likelihood}, \texttt{log\_likelihood},
+\texttt{select\_threshold} (cuantil con interpolación lineal) y las gráficas,
+hasta superar las nueve pruebas ya escritas para el 2.1.
+\item \texttt{fit\_anomaly\_detector} reparte los ham del entrenamiento: el
+80\,\% construye los histogramas y el 20\,\% reservado da los puntajes del
+cuantil 5\,\%. Si el umbral sale de los mismos ham de los histogramas, ninguno
+cae fuera del soporte y el umbral queda sesgado. En la primera partición, con
+384 componentes, quedaba marcado el 17.3\,\% de los ham de prueba en lugar del
+5\,\% (7.9\,\% con ham reservado); con 2 componentes el efecto es menor: 5.9\,\%
+frente a 4.4\,\%.
+\item Con 384 componentes el detector casi no encuentra spam. Se diagnosticó
+con la brecha por componente (media de $\log p_d$ de ham menos la de spam) y
+se compararon los casos de 1.5 en la validación interna de los 30
+entrenamientos, sin usar la prueba.
+\item Se agregaron cinco pruebas: suma por dimensión, umbral con filas
+reservadas, candidatos con columnas iniciales y solo ham, signo de la brecha
+y títulos de las figuras nuevas.
+\end{enumerate}
+
+\paragraph{Resultados de la selección.} Validación interna (20\,\% estratificado
+del entrenamiento, como en 1.4) de las 30 particiones; media $\pm$ desviación:
+\begin{center}
+\begin{tabular}{rrrrrr}
+\toprule
+$D$ & Tasa de aciertos & F1 & Spam detectado & Ham marcado & Gana\\
+\midrule
+384 & $0.7810\pm0.0140$ & $0.0401\pm0.0193$ & 3.4\,\% & 10.3\,\% & 0\\
+192 & $0.8425\pm0.0072$ & $0.0237\pm0.0191$ & 1.4\,\% & 2.9\,\% & 0\\
+2 & $0.9201\pm0.0106$ & $0.7085\pm0.0318$ & 72.1\,\% & 4.9\,\% & 30\\
+\bottomrule
+\end{tabular}
+\end{center}
+En la primera partición, la brecha de la componente~1 es 12.8 y es negativa
+en 330 de las 384 componentes: el spam está más concentrado que el ham y
+recibe más densidad. La brecha acumulada vale $+12.6$ con 2 componentes,
+cruza cero en 169, vale $-2.8$ con 192 y $-41.1$ con 384. Su máximo (14.2,
+con 11) no se evaluó porque el enunciado limita la elección a las dimensiones
+de 1.5.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\linewidth]{brecha-de-verosimilitud-entre-ham-y-spam-por-componente.png}
+\caption{Brecha de verosimilitud por componente y acumulada (primera partición, validación).}
+\end{figure}
+
+\paragraph{Demostración con $D=2$.} Semilla 2026: 2703 ham construyen los
+histogramas, 676 fijan el umbral $\tau=-0.8334$. En su prueba queda bajo el
+umbral el 4.4\,\% de los ham y el 75.9\,\% del spam (tasa de aciertos 0.9294,
+F1 0.7424). El 50\,\% del spam queda fuera del soporte de la componente~1 y
+el 25.9\,\% cae en zonas de baja densidad; el resto se mezcla con el ham.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\linewidth]{region-normal-del-detector-en-la-prueba.png}
+\caption{Región normal del detector con $D=2$ y mensajes de prueba (semilla 2026).}
+\end{figure}
+
+\section{Punto 2.2: evaluación en 30 corridas}
+\paragraph{Pasos.} La celda del 2.2 repite el detector del 2.1 en las 30
+particiones de la regresión (semillas 2026--2055), con PCA, histogramas y
+umbral ajustados solo con cada entrenamiento. Además de la tabla de medias,
+compara corrida a corrida con la regresión sin PCA y con la regresión de
+$k=2$, y reporta los errores por clase. Para tener los resultados por
+partición del punto~1 se volvieron a ejecutar sus 120 corridas en esta
+máquina: las tablas de métricas coinciden exactamente con las versionadas.
+
+\paragraph{Resultados.} Media $\pm$ desviación; errores promedio por prueba
+(1448 ham y 224 spam):
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Método & Tasa de aciertos & F1 & Ham marcado & Spam detectado\\
+\midrule
+Regresión, 768 & $0.9906\pm0.0016$ & $0.9641\pm0.0063$ & 4.0 & 94.7\,\%\\
+Regresión, $k=2$ & $0.9466\pm0.0054$ & $0.7845\pm0.0189$ & 27.9 & 72.6\,\%\\
+Histogramas, $D=2$ & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 71.4\,\%\\
+\bottomrule
+\end{tabular}
+\end{center}
+Diferencia pareada de F1 del detector: $-0.2597\pm0.0253$ frente a la
+regresión sin PCA y $-0.0802\pm0.0212$ frente a $k=2$; menor en las 30
+corridas en ambos casos. El F1 de validación del 2.1 (0.7085) anticipó el de
+prueba (0.7043). Con 2 componentes, ambos métodos detectan casi el mismo
+spam; el detector marca más ham (4.9\,\% contra 1.9\,\%) porque su umbral
+acepta el 5\,\% de los ham y no sabe hacia dónde está el spam.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{f1-score-del-detector-de-anomalias-y-de-la-regresion-logistica.png}
+\caption{F1 del detector y de la regresión en las mismas 30 particiones.}
+\end{figure}
+
 \section{Puntos pendientes}
-El punto 2 mantiene sus funciones pendientes de densidad por histogramas,
-verosimilitud, umbral y gráficas; su dimensión ya está fijada en 384 a partir
-de 1.5, con un histograma por componente.
-El equipo debe confirmar qué datos construyen las densidades, el criterio del
-umbral y la cantidad de intervalos. El punto 3 conserva los textos originales
-y requiere elegir modelos, prompt y tratamiento de respuestas ambiguas.
-LoRA o DoRA siguen pendientes. Estas tareas y sus pruebas no se eliminan;
-la ejecución final de todo el cuaderno espera a que estén implementadas.
+El punto 2 está completo. Lo que falta, en orden (detalle en \texttt{TODO.md}):
+\begin{enumerate}
+\item Ejecutar el cuaderno completo desde un kernel limpio: las celdas del
+punto 2 se ejecutaron en un entorno aparte y no tienen salidas; la tabla
+exportada de pruebas sigue en 30/2/0 (\texttt{pytest} da 44/1/0) y la figura
+de F1 del 1.5 debe regenerarse con las etiquetas nuevas. La configuración
+borra las exportaciones; sin caché, la extracción de MPNet en CPU con un hilo
+tarda más de 10 minutos.
+\item Avisar al equipo que el detector usa 2 componentes y la regresión 384.
+\item Punto 3: elegir modelos, prompt y tratamiento de respuestas ambiguas;
+LoRA o DoRA como extra. Sus tareas y pruebas no se eliminan.
+\item Completar la comparación de métodos y las conclusiones del informe.
+\item Confirmar integrantes y fecha de entrega (el enunciado indica el 20
+de octubre); luego Doxygen, PDF final y \texttt{.zip}.
+\item Menor: llevar los diagramas de caja al estilo común de las gráficas.
+\end{enumerate}
 
 \newpage
 \section{Registro de decisiones}
@@ -277,6 +393,17 @@ dataset original y el protocolo por filas sin introducir otra evaluación.\\
 24/10/2026 & Fijar $D=384$ para el punto 2. & Decisión del equipo: mitad de
 las características, 96.16\,\% de varianza descriptiva y F1 medio 0.9637
 frente a 0.9641 sin PCA; no implica equivalencia estadística.\\
+24/10/2026 & Densidades del punto 2 solo con ham del entrenamiento. &
+Describir la distribución normal; el spam queda como lo atípico.\\
+24/10/2026 & Umbral: cuantil 5\,\% de un 20\,\% de ham reservado; 30
+intervalos. & Con los ham de los histogramas el umbral queda sesgado hacia
+arriba (con 384 componentes marcaba 17.3\,\% de ham en vez de 5\,\%).\\
+24/10/2026 & Detector con $D=2$; la regresión conserva 384. & Mayor F1 de
+validación interna en las 30 particiones entre los casos de 1.5; con 384 el
+spam resulta más verosímil que el ham (F1 0.04).\\
+24/10/2026 & 2.2: comparar el detector por partición con la regresión sin PCA
+y con $k=2$. & Separar el efecto de la dimensión del efecto del método, con
+las mismas semillas.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -284,8 +411,9 @@ frente a 0.9641 sin PCA; no implica equivalencia estadística.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest}: 30 pruebas superadas, 2 pendientes (2.1 y 3.1), 0
-fallidas, en terminal y cuaderno. Incluye búsqueda vectorizada equivalente
+\item \texttt{pytest}: 44 pruebas superadas, 1 pendiente (3.1), 0
+fallidas, en terminal.  La celda de pruebas del cuaderno no se volvió a
+ejecutar en esta revisión. Incluye búsqueda vectorizada equivalente
 al entrenamiento individual, aislamiento de prueba, PCA interno y rechazo
 de cachés incompatibles.
 \item Cuaderno guardado validado con \texttt{nbformat}, IDs únicos y análisis
@@ -296,11 +424,24 @@ completaron 30 corridas con semillas 2026--2055. Toda la evaluación UCI se
 completó antes de crear los datos sintéticos de 1.3.
 \item La inspección estática del IDE no resuelve algunos imports de pruebas
 y atributos del módulo cargado dinámicamente; su ejecución real y las pruebas
-los verifican. El informe preliminar también compila (17 páginas), con los
-puntos 2 y 3 todavía pendientes.
+los verifican. El informe preliminar también compila (21 páginas), con el
+punto 3 todavía pendiente.
+\item Punto 2.1 ejecutado con las características MPNet en caché (forma
+$(5574,768)$, misma revisión del codificador). Sus figuras y la tabla de
+selección se exportaron sin reejecutar el punto 1, cuyos resultados no
+cambiaron.
+\item Punto 2.2: 30 corridas del detector. Para compararlas por partición se
+volvieron a ejecutar las 120 corridas del punto~1 en Linux: sus tablas de
+métricas coinciden exactamente con las versionadas. Solo difieren en el
+séptimo decimal las pérdidas de calibración y, en la corrida 23 con $k=2$, un
+empate resuelto con 1000 épocas en vez de 2000, sin cambio en sus métricas.
+No se sobrescribieron los archivos del punto~1.
+\item La función compartida de diagramas de caja parte en dos líneas los
+nombres largos; la figura versionada del 1.5 conserva el formato anterior
+hasta la próxima ejecución completa.
 \item Figuras inspeccionadas visualmente y PDF compilado con
 \texttt{./build\_pdf.sh review}. La ejecución final y Doxygen siguen pendientes,
-al igual que los puntos 2 y 3.
+al igual que el punto 3.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 

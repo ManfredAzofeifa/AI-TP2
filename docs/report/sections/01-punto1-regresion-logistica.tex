@@ -393,5 +393,6 @@ Esta elección reduce a la mitad las 768 características y conserva el
 próximo al 0.9641 del caso sin PCA, con diferencia media pareada de
 $-0.0004$; esta cercanía no demuestra equivalencia estadística. Se adopta
 como compromiso entre reducción de dimensionalidad y clasificación
-observada. El punto 2 estimará 384 histogramas, uno por componente, en
-lugar de 768; su implementación y evaluación siguen pendientes.
+observada para la regresión logística. El detector de histogramas del
+punto 2 compara estos mismos casos con su propia validación interna y usa
+2 componentes (Sección~\ref{sec:punto2}).

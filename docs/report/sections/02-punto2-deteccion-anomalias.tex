@@ -5,18 +5,226 @@
 
 \subsection{Densidades por histograma}
 
-El equipo confirmó $D=384$ el 24 de octubre de 2026 mediante
-\texttt{OPTIMAL\_PCA\_DIMENSIONS = 384}, a partir de los resultados del
-punto 1.5. Se utilizarán 384 histogramas, uno por componente del PCA
-ajustado exclusivamente con el entrenamiento correspondiente. La elección
-reduce a la mitad las 768 características de MPNet; no completa la
-implementación ni la evaluación del detector de anomalías.
+\paragraph{Modelo.} En cada corrida, los mensajes se proyectan con un PCA
+ajustado solo con el entrenamiento. Para cada componente $d$ se estima una
+densidad $p_d$ con un histograma de $B=30$ intervalos de igual ancho entre el
+mínimo y el máximo observados, normalizado para que integre 1. Las
+componentes se tratan como independientes y el puntaje de un mensaje
+$\mathbf{x}$ es
+\begin{equation}
+    s(\mathbf{x}) = \sum_{d=1}^{D} \log p_d(x_d).
+\end{equation}
+Un valor en un intervalo vacío o fuera del soporte del histograma recibe la
+densidad mínima $\varepsilon=10^{-12}$, de modo que su término vale
+$\log\varepsilon\approx-27.6$. Un mensaje con $s(\mathbf{x})$ menor que el
+umbral $\tau$ se marca como fuera de la distribución, es decir, como spam.
 
-TODO (punto 2.1): describir la estimación de $p_1,\dots,p_D$, graficar y
-comentar las densidades, y definir el umbral sobre la suma de
-verosimilitudes.
+\paragraph{Decisiones del equipo.} Se tomaron el 24 de octubre de 2026:
+\begin{itemize}
+    \item \textbf{Datos de las densidades.} Solo los ham del entrenamiento.
+    Los histogramas describen la distribución normal y el spam, que no
+    participa, queda como lo atípico.
+    \item \textbf{Umbral.} El 20~\% de los ham del entrenamiento se reserva y
+    no construye los histogramas. El umbral $\tau$ es el cuantil 5~\% de los
+    puntajes de esos ham reservados: se acepta marcar como spam alrededor del
+    5~\% de los mensajes normales. Si $\tau$ se calculara con los mismos ham
+    de los histogramas, ninguno caería fuera del soporte y el umbral quedaría
+    sesgado hacia arriba frente a datos nuevos. El umbral considera la
+    verosimilitud sumada de todas las densidades, como pide el enunciado.
+    \item \textbf{Dimensión.} $D=2$, elegida entre los casos del apartado~1.5
+    con una validación interna; se justifica a continuación.
+\end{itemize}
+
+\paragraph{Elección de $D$.} El enunciado pide usar la $D$ óptima deducida en
+el apartado anterior. En 1.5 se compararon 384, 192 y 2 componentes, y 384
+fue la mejor para la regresión logística (Sección~\ref{sec:punto1}). Ese
+óptimo depende del modelo, así que los mismos tres casos se compararon con el
+detector de histogramas, sin usar ningún conjunto de prueba. En cada una de
+las 30 particiones se separó la validación interna de 1.4 (20~\% estratificado
+del entrenamiento). Con el resto se ajustaron el PCA y el detector, y este se
+evaluó en la validación. La Tabla~\ref{tab:seleccion-d} resume el resultado.
+
+\begin{table}[H]
+    \centering
+    \caption{Detector de anomalías en la validación interna de los 30
+    entrenamientos: media $\pm$ desviación. La última columna cuenta las
+    particiones en que cada $D$ obtiene el mayor F1.}
+    \label{tab:seleccion-d}
+    \small
+    \begin{tabular}{lccccc}
+        \toprule
+        $D$ & Tasa de aciertos & F1-score & Spam detectado & Ham marcado & Gana \\
+        \midrule
+        384 & $0.7810\pm0.0140$ & $0.0401\pm0.0193$ & 3.4~\% & 10.3~\% & 0 \\
+        192 & $0.8425\pm0.0072$ & $0.0237\pm0.0191$ & 1.4~\% & 2.9~\% & 0 \\
+        2 & $0.9201\pm0.0106$ & $0.7085\pm0.0318$ & 72.1~\% & 4.9~\% & 30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Con 384 o 192 componentes el detector casi no encuentra spam; con 2 obtiene
+el mayor F1 en las 30 particiones. La Figura~\ref{fig:brecha} explica la
+diferencia. Para cada componente se calcula la media de $\log p_d$ de los ham
+menos la de los spam de la validación: un valor positivo indica que el spam
+cae en zonas de menor densidad. En la componente~1 esa brecha es 12.8: es la
+dirección que separa las clases. En cambio, en 330 de las 384 componentes es
+negativa, porque el spam está más concentrado que el ham, cerca de la moda de
+cada histograma, y recibe más densidad. La suma acumulada, que es la
+diferencia media de puntajes de un detector con $k$ componentes, vale $+12.6$
+con 2, se vuelve negativa desde 169, vale $-2.8$ con 192 y $-41.1$ con 384.
+Al sumar cientos de componentes poco informativas, sus aportes pequeños pero
+sistemáticos superan la señal de las primeras y el spam termina pareciendo
+más normal que el ham. La suma alcanza su máximo, 14.2, con 11 componentes;
+ese valor no se consideró porque el enunciado limita la elección a las
+dimensiones deducidas en 1.5.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{brecha-de-verosimilitud-entre-ham-y-spam-por-componente}
+    \caption{Brecha de verosimilitud entre ham y spam en la validación
+    interna de la primera partición, con 384 componentes. Arriba, por
+    componente; abajo, acumulada hasta $k$.}
+    \label{fig:brecha}
+\end{figure}
+
+Por eso el detector usa $D=2$ (\texttt{ANOMALY\_PCA\_DIMENSIONS}), mientras
+que la regresión conserva su óptimo de 384. Dos componentes retienen solo el
+8.08~\% de la varianza, pero un detector por verosimilitud no necesita
+reconstruir los datos: necesita las direcciones donde el spam se sale de lo
+normal, y aquí casi toda esa señal está en la primera componente. La
+regresión logística puede asignar pesos pequeños a las componentes poco
+útiles; el detector, en cambio, suma con el mismo peso todas las que recibe.
+
+\paragraph{Densidades estimadas.} La Figura~\ref{fig:densidades} muestra los
+histogramas de la partición de la semilla 2026. De sus 3379 ham de
+entrenamiento, 2703 construyen los histogramas y 676 fijan el umbral, que
+queda en $\tau=-0.8334$. Ambas componentes son unimodales, con la mayor parte
+de la masa entre $-0.2$ y $0.3$ y colas hacia valores negativos; no son
+exactamente simétricas ni gaussianas. Con unos 2700 ham por componente, los
+30 intervalos tienen datos suficientes para que la forma sea estable.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{densidades-de-los-ham-de-entrenamiento-en-las-dos-componentes-principales}
+    \caption{Densidades de los ham de entrenamiento en las dos componentes
+    principales (semilla 2026).}
+    \label{fig:densidades}
+\end{figure}
+
+\paragraph{Puntajes y región normal.} En la prueba de esa partición
+(Figura~\ref{fig:puntajes}), el 4.4~\% de los ham queda bajo el umbral, cerca
+del 5~\% buscado, y también el 75.9~\% del spam. El pico cercano a $-27$
+corresponde a mensajes fuera del soporte de algún histograma: es el 50~\% del
+spam, a la izquierda de todos los ham en la componente~1, y solo el 0.2~\%
+del ham. Otro 25.9~\% del spam cae dentro del soporte, pero en zonas de baja
+densidad. La Figura~\ref{fig:region} muestra la región que el detector
+acepta como normal. Como las densidades son histogramas independientes, es
+una unión de rectángulos alrededor del grupo de ham. El spam que se escapa
+(24.1~\%) se mezcla con el ham en el centro del plano: en estas dos
+componentes no se distingue de un mensaje normal, y ningún umbral de
+verosimilitud lo separaría sin marcar también muchos ham. En esta partición
+la tasa de aciertos es 0.9294 y el F1, 0.7424; la evaluación en 30 corridas
+se presenta en la Sección~\ref{sec:punto22}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{puntajes-de-verosimilitud-de-la-prueba-por-clase}
+    \caption{Puntajes de verosimilitud de la prueba por clase y umbral
+    (semilla 2026).}
+    \label{fig:puntajes}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{region-normal-del-detector-en-la-prueba}
+    \caption{Región que el detector acepta como normal y mensajes de prueba
+    (semilla 2026).}
+    \label{fig:region}
+\end{figure}
 
 \subsection{Evaluación en 30 corridas}
+\label{sec:punto22}
 
-TODO (punto 2.2): reportar y comentar las métricas frente a los resultados
-supervisados.
+El detector se evaluó en las mismas 30 particiones estratificadas 70/30
+(semillas 2026 a 2055) que la regresión logística del punto~1. En cada una,
+el PCA, los histogramas y el umbral se ajustan solo con el entrenamiento y el
+detector se aplica una vez a la prueba. La Tabla~\ref{tab:punto22} lo compara
+con la regresión completa y con la regresión que usa las mismas 2
+componentes.
+
+\begin{table}[H]
+    \centering
+    \caption{Detector de anomalías y regresión logística en las mismas 30
+    particiones: media $\pm$ desviación de las métricas y errores promedio
+    por prueba (1448 ham y 224 spam).}
+    \label{tab:punto22}
+    \footnotesize
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{lccccc}
+        \toprule
+        Método & Tasa de aciertos & F1-score & Ham marcado & Spam escapado & Spam detectado \\
+        \midrule
+        Regresión, 768 dim. & $0.9906\pm0.0016$ & $0.9641\pm0.0063$ & 4.0 & 11.8 & 94.7~\% \\
+        Regresión, PCA $k=2$ & $0.9466\pm0.0054$ & $0.7845\pm0.0189$ & 27.9 & 61.4 & 72.6~\% \\
+        Histogramas, $D=2$ & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 64.0 & 71.4~\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+En cada partición, el F1 del detector es menor que el de la regresión sin
+PCA, con una diferencia media de $-0.2597\pm0.0253$, y menor que el de la
+regresión con 2 componentes, con $-0.0802\pm0.0212$; en ambos casos ocurre en
+las 30 corridas. La tasa de aciertos baja $0.0710$ y $0.0271$,
+respectivamente. La Figura~\ref{fig:punto22-f1} muestra la distribución del
+F1 de todos los métodos.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{f1-score-del-detector-de-anomalias-y-de-la-regresion-logistica}
+    \caption{F1 del detector de anomalías y de la regresión logística en las
+    mismas 30 particiones.}
+    \label{fig:punto22-f1}
+\end{figure}
+
+\paragraph{La validación anticipó el resultado.} El F1 en la validación
+interna con la que se eligió $D$ fue $0.7085\pm0.0318$ y en la prueba es
+$0.7043\pm0.0247$: elegir 2 componentes no sobreestimó el desempeño.
+
+\paragraph{Con la misma información, la diferencia está en el ham.} Frente a
+la regresión con 2 componentes, el detector encuentra casi la misma fracción
+de spam (71.4~\% contra 72.6~\%). El spam que se escapa es, en ambos casos, el
+que se mezcla con el ham en el plano (Figura~\ref{fig:region}). La diferencia
+son los falsos positivos: 70.5 ham marcados por prueba (4.9~\%) contra 27.9
+(1.9~\%). El umbral acepta por diseño marcar el 5~\% de los ham, y el
+detector, que nunca ve spam, marca los ham poco frecuentes en cualquier
+dirección. La regresión conoce dónde está el spam y solo marca hacia ese
+lado. Por eso la precisión del detector es de 0.70.
+
+\paragraph{La dimensión explica la mayor parte de la brecha.} Reducir de 768 a
+2 componentes le cuesta a la regresión 0.18 de F1; cambiar la regresión por el
+detector en esas 2 componentes cuesta 0.08 más. El detector no puede
+aprovechar más componentes porque, al sumar cientos de densidades, el spam
+parece más normal que el ham (Sección~\ref{sec:punto2}).
+
+\paragraph{Tasa de aciertos y variabilidad.} Con 86.6~\% de ham, clasificar
+todo como ham ya da una tasa de aciertos de 0.866, así que el 0.92 del
+detector es una mejora modesta; el F1 refleja mejor el costo en la clase
+spam (Figura~\ref{fig:punto22-acc}). El F1 del detector varía entre 0.658 y
+0.764, con una desviación cuatro veces mayor que la de la regresión
+completa. El umbral cambia entre $-1.03$ y $-0.49$ según la partición, pero
+la fracción de ham marcados se mantiene en $4.9\pm1.0$~\%, cerca del 5~\%
+fijado.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{tasa-de-aciertos-del-detector-de-anomalias-y-de-la-regresion-logistica}
+    \caption{Tasa de aciertos del detector de anomalías y de la regresión
+    logística en las mismas 30 particiones.}
+    \label{fig:punto22-acc}
+\end{figure}
+
+\paragraph{Conclusión.} El detector no supera a la regresión logística en
+ninguna partición. Su ventaja es otra: se entrena sin ejemplos de spam y
+controla de forma explícita cuántos mensajes normales se marcan, lo que
+sería útil si no hubiera spam etiquetado. Con etiquetas disponibles, como en
+este dataset, el modelo supervisado es claramente mejor.
