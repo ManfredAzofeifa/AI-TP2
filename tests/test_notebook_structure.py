@@ -11,9 +11,94 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import nbformat
 
 from notebook_loader import NOTEBOOK_PATH, definition_cells, notebook
+
+
+def _gpu_host_module():
+    """!
+    @brief Carga el diagnóstico de infraestructura sin consultar servicios al importar.
+    @return Módulo de diagnóstico sin ejecutar su CLI.
+    """
+    path = NOTEBOOK_PATH.parents[1] / "scripts/gpu_host_status.py"
+    spec = importlib.util.spec_from_file_location("tp2_gpu_status", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_gpu_status_cuda_unavailable_does_not_allocate(monkeypatch):
+    """!
+    @brief Verifica el diagnóstico CPU y la negativa explícita a probar CUDA inexistente.
+    @param monkeypatch Fixture para simular PyTorch sin GPU ni modelos.
+    @return None.
+    """
+    module = _gpu_host_module()
+    fake = SimpleNamespace(__version__="test", version=SimpleNamespace(cuda=None),
+                           cuda=SimpleNamespace(is_available=lambda: False))
+    monkeypatch.setattr(module.importlib, "import_module", lambda name: fake)
+    assert module.cuda_status()["smoke_test"] == "not_requested"
+    assert module.cuda_status(True)["smoke_test"] == "cuda_unavailable"
+
+
+def test_gpu_status_discards_failed_command_and_exception_details(monkeypatch):
+    """!
+    @brief Evita publicar stderr, stdout fallido o mensajes privados de importación.
+    @param monkeypatch Fixture para simular errores con información privada.
+    @return None.
+    """
+    module = _gpu_host_module()
+    monkeypatch.setattr(module.subprocess, "run", lambda *a, **k:
+                        SimpleNamespace(returncode=1, stdout="PRIVATE_TOKEN", stderr="PRIVATE_KEY"))
+    assert module.command(["test"]) == (1, "")
+
+    def failed_import(name):
+        """!
+        @brief Simula un error cuyo mensaje debe permanecer privado.
+        @param name Nombre del módulo solicitado.
+        @return No retorna; lanza un error controlado.
+        """
+        raise RuntimeError("PRIVATE_TOKEN")
+
+    monkeypatch.setattr(module.importlib, "import_module", failed_import)
+    report = module.cuda_status(True)
+    assert report["error_type"] == "RuntimeError"
+    assert report["smoke_test"] == "failed"
+    assert "PRIVATE" not in json.dumps(report)
+
+
+def test_gpu_status_reports_dirty_without_serializing_filenames(monkeypatch, tmp_path):
+    """!
+    @brief Conserva el estado Git y limita los servicios a valores públicos conocidos.
+    @param monkeypatch Fixture para simular comandos sin consultar servicios reales.
+    @param tmp_path Directorio de prueba sin credenciales ni repositorios privados.
+    @return None.
+    """
+    module = _gpu_host_module()
+
+    def fake_command(arguments, timeout=5):
+        """!
+        @brief Simula respuestas de diagnósticos, incluida una ruta privada de Git.
+        @param arguments Argumentos solicitados por el diagnóstico.
+        @param timeout Límite temporal sin efecto en esta simulación.
+        @return Código y respuesta controlados.
+        """
+        if "--porcelain" in arguments:
+            return 0, "?? PRIVATE_TOKEN.env"
+        if "HEAD" in arguments:
+            return 0, "abcdef"
+        if "--show-current" in arguments:
+            return 0, "main"
+        return 0, "PRIVATE_TOKEN"
+
+    monkeypatch.setattr(module, "command", fake_command)
+    monkeypatch.setattr(module, "cuda_status", lambda smoke: {"available": False})
+    report = module.host_status(tmp_path, jupyter_ports=())
+    assert report["git"] == {"commit": "abcdef", "branch": "main", "dirty": True}
+    assert report["nvidia_smi"]["devices"] == []
+    assert "PRIVATE" not in json.dumps(report)
 
 
 def _partial_runner():

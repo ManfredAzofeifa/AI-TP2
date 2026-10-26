@@ -48,7 +48,8 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   k = 2 (−0.0802) en las 30 corridas. Detecta casi el mismo spam que la
   regresión con k = 2, pero marca más ham (4.9 % contra 1.9 %).
 - **Pendiente:** punto 3.
-- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+- **Pruebas externas verificadas (26/10/2026):** 51 superadas, 1 pendiente
+  (3.1), 0 fallidas; tres nuevas verifican el diagnóstico del host remoto.
   La ejecución original de las 120 corridas UCI no dependió de 1.3.
   La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
   del notebook también dieron 48/1/0.
@@ -73,6 +74,16 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   pruebas, Python y dependencias para continuar. Se conservan las constantes
   del equipo; las sugerencias quedan documentadas y desactivadas.
 - **Revisión interna:** `docs/report/review.tex` y su PDF se actualizan juntos.
+- **Host GPU preparado (26/10/2026):** guía en
+  [docs/remote-gpu-host.md](docs/remote-gpu-host.md), plantillas de SSH/Jupyter
+  en `infra/gpu-host/` y diagnóstico JSON en `scripts/gpu_host_status.py`.
+  Tailscale en Windows evita port forwarding bajo CGNAT; SSH llega a WSL2
+  y cada integrante usa su propia cuenta y Jupyter. No está desplegado aún.
+  Reportado: WSL 2.5.9.0, kernel 6.6.87.2-1, RTX 3080 Ti 12288 MiB,
+  driver 591.86. La configuración y decisiones de los puntos 1 a 3 se conservan.
+  La preparación completa se versiona en `codex/wsl-gpu-host`, clonable desde
+  WSL sin transferencias manuales; la guía incluye cómo actualizar un clon
+  existente. Esta publicación no integra cambios a `main`.
 
 ## Próximos pasos (24/10/2026)
 
@@ -349,6 +360,22 @@ el mismo que clasificar cada muestra, con 30 veces menos inferencias.
 ## Verificación pendiente
 
 Registro de verificaciones realizadas y trabajo pendiente:
+
+- [x] Guía, configuración, diagnóstico y pruebas del host GPU versionados
+      en `codex/wsl-gpu-host`, sin credenciales, modelos ni cachés.
+- [x] Diagnóstico local: distingue el Mac de WSL y CUDA ausente; pruebas de
+      errores sin mensajes privados y de estado Git sin nombres de archivos.
+- [x] Jupyter local con la plantilla: API sin token devuelve 403; con token,
+      200. No se compartieron tokens ni se probó la GPU remota.
+- [ ] Confirmar nombre de distribución y VERSION=2 de `wsl -l -v`, systemd,
+      `nvidia-smi` dentro de WSL y multiplicación CUDA en el entorno del proyecto.
+- [ ] Configurar Tailscale Windows y clientes, permisos para tres identidades,
+      SSH con claves y rechazo de acceso no autorizado desde otra red.
+- [ ] Crear cuentas/clones/Jupyter propios (8888/8889/8890); un trabajo GPU
+      pesado a la vez por los 12 GiB compartidos. Probar PyCharm y el host real
+      del kernel; MCP local no se publica ni se supone remoto automáticamente.
+- [ ] Validar disponibilidad tras cerrar SSH y tras reiniciar Windows/WSL;
+      systemd no mantiene WSL vivo: tarea Windows bajo el propietario de la distro.
 
 - [x] Descarga y lectura del dataset real: 5 574 mensajes, 4 827 ham
       (86.6 %) y 747 spam (13.4 %), como indica UCI. Se descarga en

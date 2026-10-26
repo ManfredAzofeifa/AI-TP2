@@ -13,19 +13,22 @@
 \renewcommand{\_}{\originalunderscore\allowbreak}
 \title{Trabajo práctico 2: revisión del proyecto\\[0.5ex]\large Lógica, pasos, resultados y decisiones}
 \author{Alejandro Quesada \and Jose Herrera \and Manfred Azofeifa}
-\date{24 de octubre de 2026}
+\date{26 de octubre de 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
 Revisión interna de los puntos 1 y 2: regresión logística propia, PCA y
 detección por histogramas con MPNet de 768 características. Se verificaron
-30 corridas por método, 48 pruebas superadas y una pendiente del punto 3.
+30 corridas por método y 48 pruebas superadas en la auditoría del notebook.
+La verificación externa actual da 51 superadas y una pendiente del punto 3,
+incluidas tres pruebas nuevas del diagnóstico de infraestructura.
 La auditoría corrigió la derivada de la sigmoide en cero y comparó
 alternativas de calibración. Ampliar la regresión no mejoró F1; calibrar el
 detector redujo falsas alarmas, pero dejó escapar más spam. La variante
 $D=2$ del equipo difiere de reutilizar $D=384$, como pide la lectura literal
 del enunciado: su aceptación sigue pendiente. Se mantienen las
 configuraciones vigentes y el punto 3 queda fuera del alcance.
+Se prepara además un host GPU Windows/WSL2; su despliegue sigue pendiente.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -486,6 +489,51 @@ completa, Doxygen, PDF final y \texttt{.zip}.
 \end{enumerate}
 
 \newpage
+\section{Preparación del host GPU remoto (26/10/2026)}
+La persona dispone de un desktop con RTX 3080 Ti, 12288 MiB y controlador
+Windows 591.86; reportó WSL 2.5.9.0 y kernel 6.6.87.2-1. Estos datos no
+prueban CUDA dentro de Linux. Falta conocer el nombre de la distribución y
+confirmar que usa WSL2. No se ha accedido al desktop desde esta máquina.
+
+La guía \texttt{docs/remote-gpu-host.md} propone Tailscale en Windows y en
+los tres clientes: Serve reenvía TCP privado 2222 al loopback de Windows,
+que alcanza el SSH dedicado del loopback de WSL2. SSH lleva los túneles
+hacia Jupyter de cada usuario (8888, 8889 o 8890). No requiere redirección
+del router bajo CGNAT ni publicar Jupyter. Se evita instalar Tailscale
+simultáneamente en Windows y WSL, siguiendo su documentación oficial.
+WSL2 admite CUDA con el controlador Windows; no se instala otro controlador
+NVIDIA Linux. Cloudflare Tunnel queda como alternativa documentada.
+
+Las plantillas en \texttt{infra/gpu-host/} incluyen SSH independiente con
+claves y grupo autorizado, servicio systemd y Jupyter por usuario con token
+aleatorio por arranque. Cada integrante conserva su cuenta y clon; todos
+comparten 12 GiB nominales y coordinan un trabajo GPU pesado a la vez.
+Systemd no mantiene viva la distribución: se documenta una tarea Windows
+bajo su propietario y se deja pendiente probar el reinicio completo.
+
+\texttt{scripts/gpu\_host\_status.py} produce JSON con identidad, versiones,
+CUDA, servicios, puertos y estado Git, sin leer tokens, variables de entorno,
+claves ni contenido de notebooks. No serializa nombres de archivos del
+estado Git ni mensajes de error privados. La prueba CUDA explícita solo
+multiplica matrices de $16\times16$, sin modelos. No duplica lógica ML.
+
+Se verificaron tres pruebas nuevas del diagnóstico y Jupyter local con la
+plantilla: la API devuelve 403 sin token y 200 con su token. El diagnóstico
+local identifica Darwin y CUDA ausente; no representa una ejecución remota.
+Faltan instalación Python/CUDA en WSL, conexión desde otra red, permisos
+de las tres identidades, PyCharm y persistencia tras reiniciar Windows.
+Un intérprete remoto no vuelve remotas todas las herramientas MCP: el
+diagnóstico se ejecuta por SSH y el kernel debe confirmar su host real.
+
+Esta preparación no selecciona modelos, prompt, LoRA o DoRA, no descarga
+pesos y conserva las constantes de los puntos 1 y 2. La guía, el diagnóstico,
+las plantillas y sus pruebas se versionan en \texttt{codex/wsl-gpu-host}:
+se clona esa rama directamente dentro de WSL y las actualizaciones llegan
+mediante Git, sin transferir un ZIP desde el Mac. No se incluyen credenciales,
+modelos, cachés ni entornos. Esta publicación no integra cambios a main.
+Las fuentes oficiales se enlazan en la guía.
+
+\newpage
 \section{Registro de decisiones}
 \small
 \begin{longtable}{p{0.14\linewidth}p{0.38\linewidth}p{0.39\linewidth}}
@@ -540,6 +588,10 @@ se excluyen cachés, modelos y entornos locales.\\
 25/10/2026 & Publicar la auditoría completa y seleccionar solo lo necesario para main. &
 Solicitud de la persona: notebook, Python, pruebas, fuentes LaTeX, PDF y
 sus dependencias; conservar la configuración vigente y continuar el punto 3.\\
+26/10/2026 & Preparar y publicar el host WSL2/SSH para tres usuarios. &
+GPU bajo CGNAT con Tailscale Windows. Guía, configuración, diagnóstico y
+pruebas en \texttt{codex/wsl-gpu-host}, para clonar desde WSL.
+CUDA y despliegue pendientes; no se integra a main.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -547,9 +599,10 @@ sus dependencias; conservar la configuración vigente y continuar el punto 3.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} y celda de pruebas del notebook: 48 superadas,
-1 pendiente (3.1), 0 fallidas. La prueba nueva reprodujo el fallo antes
- de la corrección y pasa después.
+\item \texttt{pytest} externo al 26/10/2026: 51 superadas, 1 pendiente
+(3.1), 0 fallidas. La última celda de pruebas ejecutada del notebook dio
+48/1/0; no se reejecutaron experimentos para preparar infraestructura.
+La prueba de la sigmoide reprodujo el fallo antes de corregirlo.
 \item Notebook guardado validado con \texttt{nbformat}, IDs únicos y AST.
 Las definiciones se cargan sin descargas ni experimentos. Se conservan
 sesgo, gradiente manual y contratos existentes.

@@ -1,0 +1,17 @@
+# Servicio de usuario: cada integrante tiene su clon y su puerto.
+[Unit]
+Description=JupyterLab privado de TP2
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/AI-TP2
+Environment=TP2_JUPYTER_PORT=8888
+EnvironmentFile=-%h/.config/tp2/jupyter.env
+UMask=0077
+ExecStart=%h/AI-TP2/.venv/bin/python -m jupyterlab --config=%h/AI-TP2/infra/gpu-host/tp2_jupyter_config.py --ServerApp.port=${TP2_JUPYTER_PORT} --ServerApp.root_dir=%h/AI-TP2
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

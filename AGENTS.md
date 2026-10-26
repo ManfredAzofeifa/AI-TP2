@@ -38,6 +38,8 @@ verificación pendiente de `TODO.md`.
 | `tests/test_notebook_structure.py` | Validez del notebook autocontenido y dependencias opcionales locales |
 | `docs/report/sections/` | Informe LaTeX, una sección por punto |
 | `docs/report/review.tex`, `docs/report/review.pdf` | Revisión interna (no se entrega): lógica, pasos, resultados y registro de decisiones; el PDF se compila con `./build_pdf.sh review` y se versiona |
+| `docs/remote-gpu-host.md`, `infra/gpu-host/` | Preparación de Windows/WSL2, SSH privado y Jupyter por usuario; despliegue pendiente |
+| `scripts/gpu_host_status.py` | Diagnóstico JSON de infraestructura, sin tokens ni modelos; no duplica la implementación ML |
 
 ## Estado actual
 
@@ -73,7 +75,8 @@ verificación pendiente de `TODO.md`.
   tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247, menor que la
   regresión sin PCA (F1 −0.2597) y con k = 2 (−0.0802) en las 30 corridas.
 - **Pendiente:** punto 3.
-- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+- **Pruebas externas verificadas (26/10/2026):** 51 superadas, 1 pendiente
+  (3.1), 0 fallidas; tres nuevas cubren el diagnóstico del host.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
   la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
   auditoría están en `codex/audit-puntos-1-2`; main conserva sus PNG previos.
@@ -97,6 +100,17 @@ verificación pendiente de `TODO.md`.
   notebook, pruebas, ejecutor portátil, dependencias y documentación necesaria
   para continuar el punto 3. Las sugerencias siguen sin adoptarse. Los PDF
   se recompilan con los PNG previos de main, sin reejecutar experimentos.
+- **Preparación GPU (26/10/2026):** guía y plantillas para Tailscale solo en
+  Windows, Serve TCP privado 2222 hacia SSH loopback de WSL2, y Jupyter por
+  usuario a través de SSH. Hardware reportado: RTX 3080 Ti de 12 GiB,
+  driver Windows 591.86 y WSL 2.5.9.0. No se ha accedido al host ni probado
+  CUDA allí. La prueba local de Jupyter rechaza API sin token (403) y acepta
+  su token (200). Falta confirmar distribución, CUDA, acceso de tres cuentas,
+  PyCharm/MCP y persistencia tras reiniciar. No se eligen modelos del punto 3.
+  La preparación se versiona en `codex/wsl-gpu-host` (guía, plantillas,
+  diagnóstico y pruebas): clonar esa rama en WSL; no depende de transferir
+  un ZIP desde el Mac. Actualizaciones con `git pull --ff-only` y árbol
+  limpio; `main` no se integra como parte de esta publicación.
 
 ## Próximos pasos
 
@@ -118,6 +132,11 @@ Lista completa y notas de ejecución en
    `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
 3. Punto 3: no elegir `LLM_MODELS`, prompt ni LoRA/DoRA sin confirmación del
    equipo; proponer opciones.
+   Preparar primero el host siguiendo `docs/remote-gpu-host.md`. No instalar
+   controladores NVIDIA Linux en WSL ni publicar Jupyter/MCP. El diagnóstico
+   remoto se ejecuta explícitamente por SSH; un intérprete remoto no convierte
+   todos los comandos del IDE en remotos. No descargar modelos para validar
+   la infraestructura; la prueba CUDA opcional solo multiplica matrices 16x16.
 4. Informe: `05-comparison.tex`, `06-conclusions.tex` y resumen final del
    notebook, después del punto 3.
 5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y

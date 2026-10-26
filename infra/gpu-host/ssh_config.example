@@ -1,0 +1,11 @@
+# Añadir a ~/.ssh/config del cliente y adaptar host, usuario, clave y puerto Jupyter.
+Host tp2-gpu
+    HostName WINDOWS_TAILSCALE_IP
+    Port 2222
+    User LINUX_USER
+    IdentityFile ~/.ssh/id_ed25519_tp2
+    IdentitiesOnly yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ExitOnForwardFailure yes
+    LocalForward 127.0.0.1:18888 127.0.0.1:8888

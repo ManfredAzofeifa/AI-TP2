@@ -198,6 +198,17 @@ verifican la organización del notebook y las dependencias opcionales.
 
 ## Documentación interna
 
+Para preparar el desktop Windows con RTX 3080 Ti como servidor privado de
+Jupyter/SSH para el equipo, seguir [la guía del host GPU](docs/remote-gpu-host.md).
+Incluye WSL2, Tailscale, PyCharm, plantillas por usuario y diagnóstico JSON.
+La preparación está escrita; el despliegue y CUDA remoto siguen pendientes.
+La rama `codex/wsl-gpu-host` contiene la guía, las plantillas y el diagnóstico;
+se puede clonar directamente desde WSL, sin transferir archivos desde el Mac:
+
+```bash
+git clone --branch codex/wsl-gpu-host https://github.com/ManfredAzofeifa/AI-TP2.git "$HOME/AI-TP2"
+```
+
 Doxygen no consume el notebook directamente. Su fuente documentable se genera
 de forma temporal y nunca se edita manualmente; `tests/` se incluye
 directamente:
@@ -246,7 +257,8 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 48 superadas, 1 pendiente y ninguna fallida.
+Las pruebas externas actuales dan 51 superadas, 1 pendiente y ninguna fallida
+(26/10/2026); la última ejecución de las pruebas dentro del notebook dio 48/1/0.
 La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
 logit cero y distinguió la variante D=2 del detector de la D=384 solicitada
 por la lectura literal de 2.1. Esa interpretación debe validarse con el docente.
