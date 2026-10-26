@@ -16,8 +16,8 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} dio 48 pruebas superadas,
-1 pendiente y ninguna fallida; la pendiente corresponde al punto 3.1.
+dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 56 pruebas
+superadas, ninguna pendiente y ninguna fallida.
 
 \subsection{Evaluación del modelo}
 
@@ -155,3 +155,24 @@ que valide la caché sin tocar resultados existentes y que ejecute una celda
 mínima en un kernel limpio del mismo intérprete invocante. No descargan
 modelos ni ejecutan experimentos largos. El procedimiento para otras
 computadoras se describe en \path{docs/reproducibility.md}.
+
+\subsection{Modelos de lenguaje (punto 3.1)}
+Las ocho pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan
+modelos: usan un tokenizador y un modelo simulados que imitan la interfaz de
+Hugging Face.
+
+\begin{itemize}
+    \item \textbf{Interpretación.} \texttt{parse\_label} traduce respuestas
+    como \texttt{spam}, \texttt{SPAM} con salto de línea o \texttt{ Ham.};
+    una negación (\emph{not spam}) cuenta como ham y una respuesta sin ninguna
+    de las dos palabras, también, y queda marcada como ambigua.
+    \item \textbf{GPU obligatoria.} Sin GPU CUDA, la selección del
+    dispositivo se detiene con un error salvo que se permita la CPU.
+    \item \textbf{Generación por lotes.} Aunque los lotes se agrupan por
+    longitud, las respuestas vuelven en el orden original; solo se
+    decodifican los tokens nuevos, sin muestreo, y \texttt{classify\_messages}
+    devuelve un tensor \texttt{int64} de forma $(n,)$.
+    \item \textbf{Caché y muestras.} La caché de respuestas se rechaza si
+    cambian los textos o el prompt; cada corrida evalúa la muestra
+    estratificada de su semilla e incluye la matriz de confusión.
+\end{itemize}

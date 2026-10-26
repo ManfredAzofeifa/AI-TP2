@@ -72,8 +72,14 @@ verificación pendiente de `TODO.md`.
 - **2.2 completo (24/10/2026):** 30 corridas con las particiones del punto 1;
   tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247, menor que la
   regresión sin PCA (F1 −0.2597) y con k = 2 (−0.0802) en las 30 corridas.
-- **Pendiente:** punto 3.
-- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+- **3.1 implementado (26/10/2026), sin ejecutar:** elección de la persona:
+  `LLM_MODELS = ["Qwen/Qwen2.5-3B-Instruct"]`, prompt sin ejemplos en inglés,
+  decodificación voraz, respuestas ambiguas como ham. La persona ejecuta las
+  celdas (GPU) en Colab u otra máquina CUDA; no ejecutarlas ni descargar el
+  modelo desde aquí. Respuestas en caché en `data/processed/llm/`.
+- **Pendiente:** ejecución en GPU y análisis de 3.1 con números reales; 3.2 y 3.3.
+- **Pruebas verificadas (26/10/2026):** 56 superadas, 0 pendientes, 0 fallidas
+  (48/1/0 antes del punto 3.1). `tests/conftest.py` fija el backend `Agg`.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
   la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
   auditoría están en `codex/audit-puntos-1-2`; main conserva sus PNG previos.
@@ -116,8 +122,10 @@ Lista completa y notas de ejecución en
    Después del punto 3, ejecutar todo el notebook para la entrega.
 2. Recordar a la persona que avise al equipo: el detector usa
    `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
-3. Punto 3: no elegir `LLM_MODELS`, prompt ni LoRA/DoRA sin confirmación del
-   equipo; proponer opciones.
+3. Punto 3: 3.1 ya tiene modelo, prompt y regla de ambigüedad confirmados.
+   Esperar a que la persona ejecute las celdas (GPU) y comparta la caché
+   antes de escribir el análisis. No elegir los modelos de 3.2 ni LoRA/DoRA
+   sin confirmación del equipo; proponer opciones.
 4. Informe: `05-comparison.tex`, `06-conclusions.tex` y resumen final del
    notebook, después del punto 3.
 5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y
@@ -199,6 +207,10 @@ Lista completa y notas de ejecución en
   empírico fija una fracción objetivo en calibración y no garantiza la misma
   tasa de falsos positivos en datos futuros.
 - 3.1: textos sin preprocesar; 30 muestras del 30 % del dataset.
+- Punto 3: toda celda que carga o usa un modelo de lenguaje llama a
+  `select_llm_device(require_gpu=True)` o reutiliza la caché de respuestas;
+  carga, prueba rápida, clasificación y liberación van en celdas separadas de
+  la evaluación, para cambiar de modelo con solo `LLM_MODEL_NAME`.
 - Métricas: tasa de aciertos y F1-score.
 
 ### Autoría

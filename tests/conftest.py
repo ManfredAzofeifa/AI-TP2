@@ -3,7 +3,11 @@
 @brief Configuración de pytest y reporte de pruebas todavía pendientes.
 """
 
+import matplotlib
 import pytest
+
+# Las pruebas solo construyen figuras: un backend sin ventanas evita depender de Tk.
+matplotlib.use("Agg")
 
 
 @pytest.hookimpl(wrapper=True)

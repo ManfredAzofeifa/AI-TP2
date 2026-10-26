@@ -47,8 +47,16 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   menor que el de la regresión sin PCA (−0.2597) y que el de la regresión con
   k = 2 (−0.0802) en las 30 corridas. Detecta casi el mismo spam que la
   regresión con k = 2, pero marca más ham (4.9 % contra 1.9 %).
-- **Pendiente:** punto 3.
-- **Pruebas verificadas:** 48 superadas, 1 pendiente (3.1), 0 fallidas.
+- **3.1 implementado (26/10/2026), sin ejecutar todavía:** `Qwen/Qwen2.5-3B-Instruct`,
+  prompt sin ejemplos en inglés, decodificación voraz; las respuestas ambiguas
+  cuentan como ham. Las celdas que cargan el modelo exigen una GPU CUDA (Colab u otra máquina con
+  NVIDIA; la computadora de desarrollo tiene GPU AMD y PyTorch solo para CPU).
+  Las respuestas se guardan en `data/processed/llm/` y la evaluación (30
+  muestras del 30 %) se ejecuta sin GPU a partir de esa caché.
+- **Pendiente:** ejecutar en GPU las celdas del modelo de 3.1 y redactar su
+  análisis; 3.2 y 3.3 (extra).
+- **Pruebas verificadas (26/10/2026):** 56 superadas, 0 pendientes, 0 fallidas
+  (antes del punto 3.1: 48/1/0). `tests/conftest.py` usa el backend `Agg`.
   La ejecución original de las 120 corridas UCI no dependió de 1.3.
   La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
   del notebook también dieron 48/1/0.
@@ -97,7 +105,10 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
 2. **Avisar a todo el equipo** que el detector del punto 2 usa
    `ANOMALY_PCA_DIMENSIONS = 2` y no 384; la regresión conserva
    `OPTIMAL_PCA_DIMENSIONS = 384`.
-3. **Punto 3 (10 puntos + 20 extra).** Primero decidir en equipo
+3. **Punto 3 (10 puntos + 20 extra).** 3.1 ya está implementado: falta
+   ejecutar en GPU (Colab) sus celdas marcadas (GPU), copiar
+   `data/processed/llm/llm-*.json` al repositorio local y escribir el análisis
+   con los números reales. Para 3.2, primero decidir en equipo
    `LLM_MODELS`, el prompt y el tratamiento de respuestas ambiguas (ver
    [Decisiones pendientes](#decisiones-pendientes-del-equipo)); después
    implementar 3.1 y, si hay tiempo, 3.2 y 3.3.
@@ -246,7 +257,10 @@ sección "Objetivo y protocolo" del notebook y en el informe.
       alternativas quedan documentadas sin adoptarse; no cambian las constantes.
 - [x] Compartir el ejecutor parcial y la guía de reproducción, con versiones
       directas observadas; excluir cachés, pesos de modelos y entornos locales.
-- [ ] `LLM_MODELS` (3.1, al menos uno; 3.2 extra, al menos dos más), el
+- [x] 3.1 (26/10/2026): `LLM_MODELS = ["Qwen/Qwen2.5-3B-Instruct"]`, prompt
+      sin ejemplos en inglés (`DEFAULT_PROMPT`), decodificación voraz y
+      respuestas ambiguas como ham. Ejecución en GPU CUDA (Colab).
+- [ ] `LLM_MODELS` de 3.2 (extra, al menos dos más), el
       prompt y qué hacer con respuestas ambiguas. Son 5 574 mensajes por
       modelo; preferir modelos que corran en las computadoras del equipo.
 - [ ] `LORA_MODEL` y LoRA o DoRA (3.3, extra).
@@ -323,10 +337,16 @@ las predicciones en `data/processed/` y las 30 muestras del 30 % las
 reutilizan. Con un modelo fijo y decodificación determinista, el resultado es
 el mismo que clasificar cada muestra, con 30 veces menos inferencias.
 
-- [ ] **3.1 (10)** `load_llm`, `parse_label` y `classify_messages`; al menos
+- [x] **3.1 (10)** `load_llm`, `parse_label` y `classify_messages`; al menos
       un modelo en `LLM_MODELS`. Reportar y comentar F1-score y tasa de
       aciertos frente a los puntos 1 y 2.
-  - [ ] Recomendada: `test_parse_label_handles_responses`.
+  - [x] Recomendada: `test_parse_label_handles_responses`, más siete pruebas
+        sin descargas (negaciones, GPU obligatoria, orden, caché, muestras).
+  - [x] Celdas separadas: selección del modelo, carga (GPU), prueba rápida
+        (GPU), clasificación (GPU), liberación de memoria y evaluación.
+        Cambiar de modelo = cambiar `LLM_MODEL_NAME` y repetir las cinco primeras.
+  - [ ] Ejecutar en GPU, copiar la caché de respuestas y escribir el análisis
+        en el notebook y en `03-punto3-modelos-lenguaje.tex` con números reales.
 - [ ] **3.2 (10 extra)** al menos dos modelos más en `LLM_MODELS`.
 - [ ] **3.3 (10 extra)** `finetune_with_lora` y `classify_finetuned` con
       LoRA o DoRA; fijar `LORA_MODEL`; reportar y analizar. Si no se hace, la

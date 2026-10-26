@@ -18,7 +18,7 @@ pytest
 # Windows with Python 3.14 (transformers is installed as its dependency).
 sentence-transformers==6.1.0
 transformers==5.20.2
-# Point 3 (LLMs, LoRA/DoRA). Uncomment and pin the versions once the team
-# chooses the models and validates them.
+# Point 3.1 uses transformers (above) on a CUDA GPU (e.g. Google Colab).
+# Point 3.3 (LoRA/DoRA): uncomment and pin once the team chooses the setup.
 # peft
 # accelerate

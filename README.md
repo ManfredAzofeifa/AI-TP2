@@ -56,7 +56,7 @@ AI-TP2/
 |---|---|---|---|---|
 | 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
 | 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | 2.1 y 2.2 listos; detector con D = 2 |
-| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | pendiente |
+| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 implementado con Qwen2.5-3B-Instruct (falta ejecutar en GPU); 3.2 y 3.3 pendientes |
 | Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
 Las funciones compartidas del notebook incluyen la carga del dataset, las particiones estratificadas
@@ -147,8 +147,10 @@ En ambos casos, el último comando debe imprimir `ok`. `requirements.txt`
 incluye `sentence-transformers`, que usa el codificador del punto 1.4:
 `sentence-transformers/all-mpnet-base-v2` (`ENCODER_NAME`). Su primera carga puede descargarlo
 a la caché de Hugging Face. No descargar modelos grandes ni ejecutar
-inferencias largas sin confirmación. Las dependencias del punto 3 (`peft`, ...) están
-comentadas hasta que el equipo elija los modelos.
+inferencias largas sin confirmación. El punto 3.1 usa `transformers` (ya incluido)
+y sus celdas de modelo exigen una GPU CUDA, por ejemplo en Google Colab; las
+instrucciones están al inicio de la sección 3 del notebook. `peft` (3.3) sigue
+comentado hasta que el equipo elija el ajuste.
 
 ## Ejecución
 

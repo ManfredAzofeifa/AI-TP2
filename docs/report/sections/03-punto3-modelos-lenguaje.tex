@@ -5,8 +5,45 @@
 
 \subsection{Clasificación sin ajuste}
 
-TODO (puntos 3.1 y 3.2): describir los modelos y el prompt, y reportar y
-comentar las métricas sobre las 30 muestras del 30~\%.
+\paragraph{Modelo y prompt.} Para el punto 3.1 se usa
+\texttt{Qwen/Qwen2.5-3B-Instruct}, un modelo decodificador de unos 3000
+millones de parámetros ajustado para seguir instrucciones. Cada mensaje se
+inserta \emph{sin preprocesar} en un prompt sin ejemplos, en inglés:
+\begin{quote}\small\ttfamily
+Classify the following SMS message as 'spam' or 'ham'. Answer with a single
+word.\\[2pt]
+Message: \{message\}\\
+Answer:
+\end{quote}
+El prompt se envía como turno del usuario con la plantilla de chat del modelo.
+No incluye ejemplos del dataset, de modo que ningún mensaje evaluado aparece
+en las instrucciones.
+
+\paragraph{Generación e interpretación.} La generación es voraz (sin
+muestreo), con un máximo de 8 tokens nuevos, en GPU y con precisión de 16
+bits. La respuesta se traduce a una etiqueta con la primera palabra
+\texttt{spam} o \texttt{ham} que contiene; una negación como \emph{not spam}
+cuenta como ham. Si la respuesta no contiene ninguna de las dos palabras, se
+considera ham: así, un spam sin respuesta clara cuenta como spam no detectado.
+Se informa cuántas respuestas fueron ambiguas.
+
+\paragraph{Evaluación.} Con el modelo y la decodificación fijos, la
+predicción de un mensaje no depende de la muestra en que aparece. Por eso cada
+uno de los 5574 mensajes se clasifica una sola vez y las 30 muestras
+estratificadas del 30\,\% (semillas 2026 a 2055) reutilizan esas predicciones.
+El resultado es el mismo que clasificar cada muestra por separado. El modelo
+no se entrena con el dataset, de modo que no hay fuga de entrenamiento hacia
+las muestras. Sin embargo, las muestras se toman de todo el dataset y se
+solapan entre sí, así que la variación entre corridas refleja solo el
+muestreo. Los puntos 1 y 2 se evalúan, en cambio, sobre el 30\,\% de prueba
+de cada partición.
+
+\paragraph{Resultados.} TODO (punto 3.1): completar con la tasa de aciertos y
+el F1-score de las 30 muestras, la cantidad de respuestas ambiguas y la matriz
+de confusión, cuando se ejecuten en GPU las celdas del modelo, y compararlos
+con la regresión logística (sección~\ref{sec:punto1}) y con el detector de
+anomalías (sección~\ref{sec:punto2}). TODO (punto 3.2, extra): agregar al
+menos dos modelos más.
 
 \subsection{Ajuste fino eficiente}
 

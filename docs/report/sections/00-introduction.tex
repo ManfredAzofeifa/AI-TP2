@@ -20,7 +20,7 @@ La implementación completa vive en el notebook
 configuración, experimentos y análisis. Las pruebas externas cargan las
 mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
 figuras y tablas provienen de la ejecución completa de sus secciones; el
-punto 3 sigue pendiente de implementación.
+punto 3.1 está implementado y falta ejecutarlo en GPU.
 
 \subsection{Protocolo común}
 
@@ -46,5 +46,9 @@ punto 3 sigue pendiente de implementación.
     el cuantil 5~\% de un 20~\% de ham reservado (Sección~\ref{sec:punto2}).
     Esta variante difiere de reutilizar $D=384$, como pide la lectura literal
     del apartado 2.1; su aceptación debe validarse con el docente.
-    \item TODO: decisiones pendientes del equipo (modelos de lenguaje).
+    \item Punto 3.1: \texttt{Qwen/Qwen2.5-3B-Instruct}, prompt sin ejemplos
+    en inglés y decodificación voraz; las respuestas ambiguas cuentan como
+    ham. Las 30 muestras estratificadas del 30~\% usan las semillas de los
+    puntos 1 y 2 (Sección~\ref{sec:punto3}). Los modelos de 3.2 y el ajuste
+    de 3.3 siguen pendientes de decisión del equipo.
 \end{itemize}

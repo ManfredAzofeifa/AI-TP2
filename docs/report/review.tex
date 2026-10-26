@@ -13,19 +13,21 @@
 \renewcommand{\_}{\originalunderscore\allowbreak}
 \title{Trabajo práctico 2: revisión del proyecto\\[0.5ex]\large Lógica, pasos, resultados y decisiones}
 \author{Alejandro Quesada \and Jose Herrera \and Manfred Azofeifa}
-\date{24 de octubre de 2026}
+\date{26 de octubre de 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
 Revisión interna de los puntos 1 y 2: regresión logística propia, PCA y
 detección por histogramas con MPNet de 768 características. Se verificaron
-30 corridas por método, 48 pruebas superadas y una pendiente del punto 3.
+30 corridas por método. Con el punto 3.1 implementado (sin ejecutar todavía
+en GPU), \texttt{pytest} da 56 pruebas superadas y ninguna pendiente.
 La auditoría corrigió la derivada de la sigmoide en cero y comparó
 alternativas de calibración. Ampliar la regresión no mejoró F1; calibrar el
 detector redujo falsas alarmas, pero dejó escapar más spam. La variante
 $D=2$ del equipo difiere de reutilizar $D=384$, como pide la lectura literal
 del enunciado: su aceptación sigue pendiente. Se mantienen las
-configuraciones vigentes y el punto 3 queda fuera del alcance.
+configuraciones vigentes. El punto 3.1 usa Qwen2.5-3B-Instruct; sus
+métricas se registrarán cuando se ejecute en GPU.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -268,9 +270,10 @@ frente a 4.4\,\%.
 con la brecha por componente (media de $\log p_d$ de ham menos la de spam) y
 se compararon los casos de 1.5 en la validación interna de los 30
 entrenamientos, sin usar la prueba de esa misma corrida.
-\item Se agregaron cinco pruebas: suma por dimensión, umbral con filas
+\item Se agregaron pruebas de suma por dimensión, umbral con filas
 reservadas, candidatos con columnas iniciales y solo ham, signo de la brecha
-y títulos de las figuras nuevas.
+y títulos de las figuras nuevas; \texttt{tests/test\_punto2.py} reúne 15
+pruebas en total.
 \end{enumerate}
 
 \paragraph{Resultados de la selección.} Validación interna (20\,\% estratificado
@@ -469,6 +472,53 @@ Tres pruebas nuevas verifican selección, identidad de caché sin modificar
 resultados y ejecución de una celda mínima con el intérprete correcto.
 La comprobación local del ejecutor no requirió repetir las corridas largas.
 
+\section{Punto 3.1: clasificación con un modelo de lenguaje (26/10/2026)}
+
+\subsection{Decisiones}
+La persona eligió, el 26/10/2026, \texttt{Qwen/Qwen2.5-3B-Instruct} como
+único modelo de 3.1 (3.2 y 3.3 quedan para después), un prompt sin ejemplos
+en inglés (\texttt{DEFAULT\_PROMPT}) aplicado con la plantilla de chat del
+modelo, decodificación voraz y la regla de respuestas ambiguas: si la
+respuesta no contiene \texttt{spam} ni \texttt{ham}, cuenta como ham. Las
+celdas que cargan el modelo se ejecutan en una GPU CUDA (Google Colab u otra
+máquina con NVIDIA): la computadora de desarrollo tiene una GPU AMD y
+PyTorch solo para CPU.
+
+\subsection{Lógica y pasos}
+\begin{enumerate}
+\item \texttt{select\_llm\_device(require\_gpu=True)} devuelve
+\texttt{cuda} o detiene la celda con instrucciones; nunca clasifica en CPU
+por omisión. \texttt{load\_llm} carga tokenizador (relleno a la izquierda)
+y modelo en \texttt{bfloat16} (GPU con capacidad 8.0 o más) o
+\texttt{float16}, y registra la revisión descargada.
+\item \texttt{generate\_responses} arma los prompts con el texto original,
+agrupa los lotes por longitud para reducir relleno, genera hasta 8 tokens
+sin muestreo y decodifica solo los tokens nuevos, en el orden original.
+\item \texttt{parse\_label} toma la primera palabra \texttt{spam} o
+\texttt{ham}; una negación (\emph{not spam}, \emph{non-spam}) cuenta como
+ham y una respuesta sin ninguna de las dos, también.
+\texttt{is\_ambiguous\_response} permite contarlas.
+\item Cada mensaje se clasifica una sola vez por modelo. Las respuestas se
+guardan en \texttt{data/processed/llm/} con el hash de los textos, el modelo,
+el prompt y la cantidad de tokens; una caché que no coincide se rechaza.
+\item \texttt{llm\_sample\_metrics} evalúa 30 muestras estratificadas del
+30\,\% (semillas 2026 a 2055) y agrega la matriz de confusión de cada muestra.
+\end{enumerate}
+
+Las celdas del notebook separan selección del modelo, carga (GPU), prueba
+rápida (GPU), clasificación completa (GPU), liberación de memoria y
+evaluación. Cambiar de modelo solo requiere cambiar
+\texttt{LLM\_MODEL\_NAME} y repetir las cinco primeras.
+
+\subsection{Pruebas y verificación}
+Se implementó la prueba recomendada de \texttt{parse\_label} y siete más:
+negaciones y ambigüedad, exigencia de GPU, orden de las respuestas con un
+tokenizador y un modelo simulados, contrato de \texttt{classify\_messages},
+validación de la caché, muestreo de las métricas y resumen de respuestas.
+También se comprobó \texttt{generate\_responses} con un Qwen2 diminuto de
+pesos aleatorios creado localmente, sin descargas. Todavía no hay métricas:
+se completarán con la ejecución en GPU.
+
 \section{Puntos pendientes}
 El punto 2 está implementado; su conformidad literal requiere resolver la
 variante de dimensión. Lo que falta, en orden (detalle en \texttt{TODO.md}):
@@ -478,8 +528,9 @@ La referencia con $D=384$ ya tiene 30 corridas; la persona
 confirmó mantener la configuración vigente y no adoptar las alternativas.
 \item Avisar al equipo que el detector vigente usa 2 componentes y la
 regresión 384; las constantes no se cambiaron durante la auditoría.
-\item Punto 3: elegir modelos, prompt y tratamiento de respuestas ambiguas;
-LoRA o DoRA como extra. Sus tareas y pruebas se conservan.
+\item Punto 3.1: ejecutar en GPU las celdas del modelo, copiar la caché
+de respuestas y redactar el análisis con los números reales. Después, 3.2
+(dos modelos más) y 3.3 (LoRA o DoRA), si el equipo lo decide.
 \item Completar la comparación de métodos y las conclusiones del informe.
 \item Confirmar integrantes y fecha de entrega; después, ejecución final
 completa, Doxygen, PDF final y \texttt{.zip}.
@@ -510,7 +561,7 @@ Confirmación del equipo; reemplaza MiniLM/384 y sus resultados.\\
 Aislar cada prueba y usar el ganador automáticamente.\\
 24/10/2026 & Conservar duplicados y documentar su limitación. & Mantener el
 dataset original y el protocolo por filas sin introducir otra evaluación.\\
-24/10/2026 & Fijar inicialmente $D=384$ para el punto 2 (sustituida después por $D=2$). & Decisión del equipo: mitad de
+24/10/2026 & Fijar $D=384$ como óptimo de 1.5 (regresión); el detector usa luego $D=2$. & Decisión del equipo: mitad de
 las características, 96.16\,\% de varianza descriptiva y F1 medio 0.9637
 frente a 0.9641 sin PCA; no implica equivalencia estadística.\\
 24/10/2026 & Densidades del punto 2 solo con ham del entrenamiento. &
@@ -540,6 +591,14 @@ se excluyen cachés, modelos y entornos locales.\\
 25/10/2026 & Publicar la auditoría completa y seleccionar solo lo necesario para main. &
 Solicitud de la persona: notebook, Python, pruebas, fuentes LaTeX, PDF y
 sus dependencias; conservar la configuración vigente y continuar el punto 3.\\
+26/10/2026 & 3.1 con Qwen2.5-3B-Instruct, prompt sin ejemplos en inglés y
+decodificación voraz; respuestas ambiguas como ham. & Elección de la persona.
+Sin ejemplos del dataset en el prompt no hay fuga hacia la evaluación; contar
+lo ambiguo como ham penaliza el spam no detectado y se informa su cantidad.\\
+26/10/2026 & Celdas del modelo en GPU CUDA (Colab u otra máquina), separadas
+de la evaluación. & La GPU local es AMD y PyTorch local es solo CPU; la caché
+de respuestas permite evaluar sin GPU y cambiar de modelo sin tocar otras
+celdas.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -547,9 +606,10 @@ sus dependencias; conservar la configuración vigente y continuar el punto 3.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} y celda de pruebas del notebook: 48 superadas,
-1 pendiente (3.1), 0 fallidas. La prueba nueva reprodujo el fallo antes
- de la corrección y pasa después.
+\item \texttt{pytest} (26/10/2026, con el punto 3.1 implementado): 56
+superadas, 0 pendientes y 0 fallidas. Antes del punto 3.1 eran 48/1/0. La
+prueba de la derivada reprodujo el fallo antes de la corrección y pasa
+después. Las pruebas usan el backend \texttt{Agg} de Matplotlib.
 \item Notebook guardado validado con \texttt{nbformat}, IDs únicos y AST.
 Las definiciones se cargan sin descargas ni experimentos. Se conservan
 sesgo, gradiente manual y contratos existentes.
@@ -573,7 +633,7 @@ experimentales a mano.
 \item Revisión e informe preliminar compilados mediante los dos comandos
 \texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
 de las páginas renderizadas.
-El punto 3, la comparación global y las
+La ejecución en GPU del punto 3.1, la comparación global y las
 conclusiones finales permanecen pendientes.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
