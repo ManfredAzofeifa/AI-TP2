@@ -12,7 +12,7 @@ numpy==2.5.3
 pandas==3.0.3
 torch==2.14.0
 ipywidgets
-# Unit tests. The notebook can also run them without pytest.
+# Unit tests. The notebook uses the same pytest fixture handling.
 pytest
 # Point 1.4: encoder sentence-transformers/all-mpnet-base-v2 (768 features), using
 # Windows with Python 3.14 (transformers is installed as its dependency).

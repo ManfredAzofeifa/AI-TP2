@@ -47,15 +47,18 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   menor que el de la regresión sin PCA (−0.2597) y que el de la regresión con
   k = 2 (−0.0802) en las 30 corridas. Detecta casi el mismo spam que la
   regresión con k = 2, pero marca más ham (4.9 % contra 1.9 %).
-- **3.1 implementado (26/10/2026), sin ejecutar todavía:** `Qwen/Qwen2.5-3B-Instruct`,
+- **3.1 ejecutado (26/10/2026):** `Qwen/Qwen2.5-3B-Instruct`,
   prompt sin ejemplos en inglés, decodificación voraz; las respuestas ambiguas
-  cuentan como ham. Las celdas que cargan el modelo exigen una GPU CUDA (Colab u otra máquina con
-  NVIDIA; la computadora de desarrollo tiene GPU AMD y PyTorch solo para CPU).
+  cuentan como ham. Ejecución en la RTX 3080 Ti remota: 5574 mensajes en
+  84.2 s, bfloat16, lote 16, revisión `aa8e72537993ba99e69dfaafa59ed015b17504d1`.
+  En 30 muestras: accuracy 0.7853 ± 0.0073; F1 0.5452 ± 0.0090. Cero respuestas
+  ambiguas; 1168 ham marcados como spam y 30 spam escapados en todo el dataset.
   Las respuestas se guardan en `data/processed/llm/` y la evaluación (30
   muestras del 30 %) se ejecuta sin GPU a partir de esa caché.
-- **Pendiente:** ejecutar en GPU las celdas del modelo de 3.1 y redactar su
-  análisis; 3.2 y 3.3 (extra).
-- **Pruebas verificadas (26/10/2026):** 56 superadas, 0 pendientes, 0 fallidas
+- **Pendiente:** 3.2 y 3.3 (extras), comparación/conclusiones globales y cierre.
+  Tras completar 3.1, la persona autoriza respaldarlo en `origin/main` y
+  continuar con 3.2; falta seleccionar los modelos adicionales.
+- **Pruebas verificadas (26/10/2026):** 58 superadas, 0 pendientes, 0 fallidas
   (antes del punto 3.1: 48/1/0). `tests/conftest.py` usa el backend `Agg`.
   La ejecución original de las 120 corridas UCI no dependió de 1.3.
   La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
@@ -81,6 +84,20 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   pruebas, Python y dependencias para continuar. Se conservan las constantes
   del equipo; las sugerencias quedan documentadas y desactivadas.
 - **Revisión interna:** `docs/report/review.tex` y su PDF se actualizan juntos.
+- **Continuación del punto 3 (26/10/2026):** Mac y WSL en `main`, base
+  `d520690`. Se conserva la celda local agregada por la persona. La persona
+  eligió Cloudflare Quick Tunnel sin cuenta ni dominio y conectó PyCharm;
+  la consulta MCP confirmó Linux/WSL2, PyTorch `2.14.0+cu130`, CUDA disponible
+  y RTX 3080 Ti. No se descargaron modelos ni se ejecutó inferencia.
+  El antiguo esquema SSH/Tailscale queda en `codex/wsl-gpu-host`, fuera del
+  flujo actual. Pruebas locales de main: 48 superadas, 1 pendiente, 0 fallidas.
+- **Integración del equipo (26/10/2026):** incorporado `db5db2e` con el
+  modelo Qwen2.5-3B-Instruct, prompt y regla de ambigüedad confirmados.
+  Contexto local reconciliado con el remoto; 56 pruebas superadas.
+  La persona autoriza descargar y evaluar 3.1 en WSL, sin cargarlo en el Mac.
+  El host se comparte de a una persona/un trabajo GPU a la vez. La suspensión
+  ya interrumpió su disponibilidad: conservar el kernel exige mantener
+  Windows/WSL/Jupyter vivos; no equivale a persistencia garantizada.
 
 ## Próximos pasos (24/10/2026)
 
@@ -96,7 +113,7 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
    conservadas en la copia local ejecutada y tabla 48/1/0. Las 18 figuras
    regeneradas e inspeccionadas se conservan en la rama de auditoría; main
    mantiene sus PNG previos y recompila los PDF con ellos.
-   La ejecución final de principio a fin sigue pendiente del punto 3.
+   La ejecución final de principio a fin se realizará al cerrar la entrega.
    La configuración borra las exportaciones, incluidas las tablas de auditoría;
    para regenerar estas últimas activar la celda opcional con autorización.
    Mantener `RUN_METRIC_AUDIT = False` cuando no se quieran repetir esas corridas.
@@ -105,13 +122,12 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
 2. **Avisar a todo el equipo** que el detector del punto 2 usa
    `ANOMALY_PCA_DIMENSIONS = 2` y no 384; la regresión conserva
    `OPTIMAL_PCA_DIMENSIONS = 384`.
-3. **Punto 3 (10 puntos + 20 extra).** 3.1 ya está implementado: falta
-   ejecutar en GPU (Colab) sus celdas marcadas (GPU), copiar
-   `data/processed/llm/llm-*.json` al repositorio local y escribir el análisis
-   con los números reales. Para 3.2, primero decidir en equipo
-   `LLM_MODELS`, el prompt y el tratamiento de respuestas ambiguas (ver
-   [Decisiones pendientes](#decisiones-pendientes-del-equipo)); después
-   implementar 3.1 y, si hay tiempo, 3.2 y 3.3.
+3. **Punto 3 (10 puntos + 20 extra).** 3.1 completo en la GPU WSL:
+   respuestas en caché local, 30 muestras, figuras y análisis verificados.
+   Reutilizar la caché para evaluar sin cargar el modelo. La persona
+   solicita respaldar primero 3.1 en `origin/main` y continuar con 3.2.
+   Primero decidir los modelos adicionales; LoRA/DoRA (3.3) sigue pendiente (ver
+   [Decisiones pendientes](#decisiones-pendientes-del-equipo)).
 4. **Informe:** completar `05-comparison.tex` (todos los métodos) y
    `06-conclusions.tex`, y el resumen de conclusiones al final del notebook.
    Dependen del punto 3.
@@ -259,7 +275,7 @@ sección "Objetivo y protocolo" del notebook y en el informe.
       directas observadas; excluir cachés, pesos de modelos y entornos locales.
 - [x] 3.1 (26/10/2026): `LLM_MODELS = ["Qwen/Qwen2.5-3B-Instruct"]`, prompt
       sin ejemplos en inglés (`DEFAULT_PROMPT`), decodificación voraz y
-      respuestas ambiguas como ham. Ejecución en GPU CUDA (Colab).
+      respuestas ambiguas como ham. Ejecución en GPU CUDA de WSL.
 - [ ] `LLM_MODELS` de 3.2 (extra, al menos dos más), el
       prompt y qué hacer con respuestas ambiguas. Son 5 574 mensajes por
       modelo; preferir modelos que corran en las computadoras del equipo.
@@ -335,9 +351,11 @@ Es independiente de los otros puntos: solo usa los textos sin preprocesar y
 las funciones compartidas del cuaderno. El notebook clasifica cada mensaje una sola vez por modelo, guarda
 las predicciones en `data/processed/` y las 30 muestras del 30 % las
 reutilizan. Con un modelo fijo y decodificación determinista, el resultado es
-el mismo que clasificar cada muestra, con 30 veces menos inferencias.
+el mismo que reutilizar las mismas predicciones por muestra, evitando unas
+nueve veces las inferencias de reclasificar las 30 muestras del 30 %.
 
-- [x] **3.1 (10)** `load_llm`, `parse_label` y `classify_messages`; al menos
+- [x] **3.1 (10)** `load_llm`, `parse_label` y `classify_messages` implementadas,
+      ejecución GPU y análisis completos. Al menos
       un modelo en `LLM_MODELS`. Reportar y comentar F1-score y tasa de
       aciertos frente a los puntos 1 y 2.
   - [x] Recomendada: `test_parse_label_handles_responses`, más siete pruebas
@@ -345,13 +363,13 @@ el mismo que clasificar cada muestra, con 30 veces menos inferencias.
   - [x] Celdas separadas: selección del modelo, carga (GPU), prueba rápida
         (GPU), clasificación (GPU), liberación de memoria y evaluación.
         Cambiar de modelo = cambiar `LLM_MODEL_NAME` y repetir las cinco primeras.
-  - [ ] Ejecutar en GPU, copiar la caché de respuestas y escribir el análisis
+  - [x] Ejecutar en la GPU WSL autorizada, conservar la caché y escribir el análisis
         en el notebook y en `03-punto3-modelos-lenguaje.tex` con números reales.
 - [ ] **3.2 (10 extra)** al menos dos modelos más en `LLM_MODELS`.
 - [ ] **3.3 (10 extra)** `finetune_with_lora` y `classify_finetuned` con
       LoRA o DoRA; fijar `LORA_MODEL`; reportar y analizar. Si no se hace, la
       celda se omite sola y el notebook sigue.
-- [ ] Informe: `03-punto3-modelos-lenguaje.tex`.
+- [x] Informe: 3.1 en `03-punto3-modelos-lenguaje.tex`; 3.2 y 3.3 pendientes.
 
 ## Integración
 
@@ -370,6 +388,32 @@ el mismo que clasificar cada muestra, con 30 veces menos inferencias.
 
 Registro de verificaciones realizadas y trabajo pendiente:
 
+- [x] Volver a main en Mac y WSL sin alterar el contenido de sus notebooks,
+      reiniciar el kernel ni borrar los archivos de soporte del IDE.
+- [x] Consultar identidad del kernel remoto, versión de PyTorch y GPU/CUDA
+      mediante las herramientas de notebook de PyCharm.
+- [x] Punto 3.1: conservar Qwen2.5-3B-Instruct, prompt y respuestas ambiguas
+      acordados por el equipo; descargar y evaluar en WSL con autorización.
+- [x] Registrar revisión de tokenizador y pesos; repetir la generación y
+      comprobar igualdad exacta con la caché anterior (84.2 s de generación).
+- [x] Corregir el ejecutor de pruebas del notebook para resolver fixtures
+      mediante pytest y recargar módulos: 58/0/0 en notebook y pruebas externas.
+- [x] Exportar y revisar las dos figuras, las 30 filas de métricas, el resumen
+      y los detalles de ejecución. El modelo queda liberado de la GPU.
+- [x] Cierre de 3.1: repetir la evaluación desde caché sin nueva inferencia;
+      58/0/0 en WSL y suite local, fuentes de las 65 celdas sincronizadas.
+      Regenerar los subtítulos de las figuras para indicar muestras del 30 %,
+      transferir los ocho artefactos con SHA-256, limpiar las salidas de
+      desarrollo y recompilar ambos PDF con las figuras corregidas.
+      La configuración y los algoritmos de 1 y 2 no cambian; sin commit ni push.
+- [x] Autorizar el respaldo del cierre de 3.1 mediante commit y push a
+      `origin/main` antes de iniciar 3.2 (26/10/2026).
+- [ ] Punto 3.2/3.3: decidir modelos adicionales y LoRA/DoRA en equipo.
+- [x] Autenticación HF en WSL mediante login interactivo (confirmación de la
+      persona), con token dedicado
+      de lectura/alcance limitado; no pegar secretos en notebook, Git ni chat.
+      Quienes comparten el usuario Linux pueden usar sus credenciales guardadas.
+
 - [x] Descarga y lectura del dataset real: 5 574 mensajes, 4 827 ham
       (86.6 %) y 747 spam (13.4 %), como indica UCI. Se descarga en
       `data/raw/SMSSpamCollection`, que se versiona desde el 23/10/2026.
@@ -378,7 +422,8 @@ Registro de verificaciones realizadas y trabajo pendiente:
 - [x] El informe (`main.tex`) compila: 17 páginas, sin citas sin resolver
       ni líneas fuera del margen en la pasada final (24/10/2026); con el
       punto 2 eran 23 páginas. La versión auditada y la revisión interna
-      compilan y se revisaron visualmente. Es preliminar: falta el punto 3.
+      compilan y se revisaron visualmente. La versión con 3.1 sigue siendo
+      preliminar: faltan la comparación global, las conclusiones y el cierre.
 - [ ] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
       entrega, con todos los puntos terminados.
 - [x] Migración del notebook: `nbformat`, IDs únicos y AST válidos;
@@ -401,7 +446,7 @@ Registro de verificaciones realizadas y trabajo pendiente:
       estilo común están en `codex/audit-puntos-1-2`. Sin descargas.
 - [x] 30 corridas por alternativa adicional, con selección interna de cada
       entrenamiento y tablas exportadas desde la celda opcional del notebook.
-- [ ] Ejecución final de principio a fin después de implementar el punto 3.
+- [ ] Ejecución final de principio a fin al cerrar la entrega.
 - [ ] Generación de Doxygen (no estaba instalado).
 
 ## Checklist de entrega

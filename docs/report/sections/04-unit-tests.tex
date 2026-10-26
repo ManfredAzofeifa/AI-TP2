@@ -16,8 +16,18 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 56 pruebas
+dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 58 pruebas
 superadas, ninguna pendiente y ninguna fallida.
+
+El ejecutor del notebook usa pytest para resolver fixtures como
+\texttt{monkeypatch} y \texttt{tmp\_path}; llamar las pruebas sin argumentos
+producía fallos en las pruebas nuevas de 3.1. Una prueba de regresión verifica
+la ejecución con fixtures. La celda recarga el cargador y los módulos de
+pruebas para no usar definiciones antiguas en un kernel persistente.
+También se verifica que tokenizador y pesos compartan la misma revisión,
+aunque Transformers no conserve \texttt{config.\_commit\_hash}. Las dos
+verificaciones usan simulaciones o archivos temporales, sin descargar modelos.
+La celda del notebook ejecutada en WSL también dio 58/0/0.
 
 \subsection{Evaluación del modelo}
 
@@ -157,7 +167,7 @@ modelos ni ejecutan experimentos largos. El procedimiento para otras
 computadoras se describe en \path{docs/reproducibility.md}.
 
 \subsection{Modelos de lenguaje (punto 3.1)}
-Las ocho pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan
+Las nueve pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan
 modelos: usan un tokenizador y un modelo simulados que imitan la interfaz de
 Hugging Face.
 

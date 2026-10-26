@@ -56,7 +56,7 @@ AI-TP2/
 |---|---|---|---|---|
 | 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
 | 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | 2.1 y 2.2 listos; detector con D = 2 |
-| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 implementado con Qwen2.5-3B-Instruct (falta ejecutar en GPU); 3.2 y 3.3 pendientes |
+| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 ejecutado y documentado; 3.2 y 3.3 pendientes |
 | Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
 Las funciones compartidas del notebook incluyen la carga del dataset, las particiones estratificadas
@@ -200,6 +200,27 @@ verifican la organización del notebook y las dependencias opcionales.
 
 ## Documentación interna
 
+Desde el 26/10/2026 se continúa en `main` con PyCharm conectado a un Jupyter
+externo de WSL2 mediante Cloudflare Quick Tunnel sin cuenta ni dominio.
+La autenticación usa el token de Jupyter; no versionar el token ni la URL
+temporal. El kernel consultado por MCP detectó CUDA y la RTX 3080 Ti con
+PyTorch `2.14.0+cu130`. Qwen2.5-3B-Instruct ya clasificó los 5574 mensajes
+en 84.2 s de generación: F1 0.5452 ± 0.0090 y accuracy 0.7853 ± 0.0073 en
+30 muestras; los falsos positivos limitan su resultado. La antigua
+preparación SSH/Tailscale se conserva en la rama `codex/wsl-gpu-host` y no
+es requisito para este flujo. El equipo comparte la GPU de a una persona o
+un trabajo a la vez; suspensión y reinicios pueden interrumpir el kernel.
+Una terminal local del IDE sigue ejecutando
+comandos en el Mac; las pruebas GPU se hacen en el kernel remoto conectado.
+
+Para autenticar las descargas de HF, ejecutar desde el clon en una terminal
+de WSL `.venv/bin/hf auth login`, elegir el ingreso interactivo
+del token (o el flujo de navegador disponible) y no guardarlo como credencial
+Git. Usar un token dedicado de lectura y alcance limitado, porque el usuario
+Linux compartido puede usar las credenciales guardadas. No escribir tokens
+en celdas, argumentos ni archivos versionados. La autenticación mejora los
+límites de acceso/descarga; no acelera las operaciones del modelo en CUDA.
+
 Doxygen no consume el notebook directamente. Su fuente documentable se genera
 de forma temporal y nunca se edita manualmente; `tests/` se incluye
 directamente:
@@ -248,7 +269,8 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 48 superadas, 1 pendiente y ninguna fallida.
+Las pruebas actuales dan 58 superadas, ninguna pendiente y ninguna fallida,
+tanto fuera del notebook como en su celda de pruebas del kernel WSL.
 La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
 logit cero y distinguió la variante D=2 del detector de la D=384 solicitada
 por la lectura literal de 2.1. Esa interpretación debe validarse con el docente.

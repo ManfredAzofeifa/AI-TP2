@@ -72,18 +72,26 @@ verificación pendiente de `TODO.md`.
 - **2.2 completo (24/10/2026):** 30 corridas con las particiones del punto 1;
   tasa de aciertos 0.9195 ± 0.0084 y F1 0.7043 ± 0.0247, menor que la
   regresión sin PCA (F1 −0.2597) y con k = 2 (−0.0802) en las 30 corridas.
-- **3.1 implementado (26/10/2026), sin ejecutar:** elección de la persona:
+- **3.1 ejecutado (26/10/2026):** elección de la persona:
   `LLM_MODELS = ["Qwen/Qwen2.5-3B-Instruct"]`, prompt sin ejemplos en inglés,
-  decodificación voraz, respuestas ambiguas como ham. La persona ejecuta las
-  celdas (GPU) en Colab u otra máquina CUDA; no ejecutarlas ni descargar el
-  modelo desde aquí. Respuestas en caché en `data/processed/llm/`.
-- **Pendiente:** ejecución en GPU y análisis de 3.1 con números reales; 3.2 y 3.3.
-- **Pruebas verificadas (26/10/2026):** 56 superadas, 0 pendientes, 0 fallidas
+  decodificación voraz, respuestas ambiguas como ham. La persona autorizó
+  el 26/10/2026 descargar y evaluar este modelo en la GPU WSL conectada a
+  PyCharm; no cargarlo en el Mac. Respuestas en `data/processed/llm/`.
+  RTX 3080 Ti, bfloat16, lote 16: 5574 mensajes en 84.2 s, sin incluir carga
+  ni descarga. Revisión `aa8e72537993ba99e69dfaafa59ed015b17504d1` fijada en
+  tokenizador y pesos. En 30 muestras: accuracy 0.7853 ± 0.0073 y F1
+  0.5452 ± 0.0090. Sin respuestas ambiguas; 1168 falsos positivos y 30 falsos
+  negativos en todo el dataset. Figuras, CSV y análisis de 3.1 completados.
+  La nueva ejecución reproduce exactamente la caché anterior y libera el modelo.
+- **Pendiente:** 3.2 y 3.3 (extras), comparación/conclusiones globales y cierre.
+  Tras cerrar 3.1, la persona autorizó respaldar sus cambios en `origin/main`
+  y continuar con 3.2; los modelos adicionales aún requieren selección.
+- **Pruebas verificadas (26/10/2026):** 58 superadas, 0 pendientes, 0 fallidas
   (48/1/0 antes del punto 3.1). `tests/conftest.py` fija el backend `Agg`.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
   la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
   auditoría están en `codex/audit-puntos-1-2`; main conserva sus PNG previos.
-  La ejecución final completa sigue pendiente del punto 3. Informe preliminar
+  La ejecución final completa sigue pendiente del cierre. Informe preliminar
   y revisión interna compilados y revisados visualmente.
 - **Preparación para el equipo (25/10/2026):** ejecutor portable en
   `scripts/run_puntos_1_2.py` y guía en `docs/reproducibility.md`. El notebook
@@ -103,6 +111,41 @@ verificación pendiente de `TODO.md`.
   notebook, pruebas, ejecutor portátil, dependencias y documentación necesaria
   para continuar el punto 3. Las sugerencias siguen sin adoptarse. Los PDF
   se recompilan con los PNG previos de main, sin reejecutar experimentos.
+- **Continuación en main (26/10/2026):** los clones del Mac y de WSL volvieron
+  a `main`, base `d520690`, conservando el notebook local modificado por la
+  persona y los archivos auxiliares de PyCharm en WSL. La conexión vigente es
+  Jupyter externo por Cloudflare Quick Tunnel sin cuenta ni dominio, con token
+  Jupyter; no se requiere SSH/Tailscale. El equipo comparte ahora ese host,
+  de a una persona o un trabajo GPU a la vez, sin kernels dedicados garantizados.
+  Una consulta por MCP confirmó kernel Linux/WSL2, PyTorch `2.14.0+cu130`,
+  CUDA disponible y RTX 3080 Ti. Esto verifica identidad y disponibilidad,
+  no inferencia LLM ni entrenamiento. La infraestructura anterior permanece
+  en `codex/wsl-gpu-host`; no se integra al volver a main. Pruebas de main:
+  48 superadas, 1 pendiente (3.1), 0 fallidas.
+- **Integración de 3.1 (26/10/2026):** main incorpora `db5db2e`, conservando
+  Qwen2.5-3B-Instruct, prompt, reglas de respuestas y las ocho pruebas nuevas.
+  La celda local de diagnóstico CUDA se retiró con respaldo. Los conflictos
+  de contexto conservan ambas decisiones; el PDF interno se regenera desde
+  el TeX reconciliado. Verificación tras incorporar el commit: 56/0/0.
+  La suspensión accidental interrumpió la disponibilidad: conservar estado
+  requiere mantener vivos Windows/WSL/Jupyter; no prometer persistencia absoluta.
+  Dos pruebas nuevas verifican la revisión sin depender de `_commit_hash` y
+  el ejecutor del notebook con fixtures pytest. La celda remota también da
+  58/0/0. Al usar un kernel persistente, sincronizar el archivo guardado de
+  WSL y recargar los módulos de pruebas; ejecutar celdas del editor no
+  actualiza por sí solo el archivo que consume `notebook_loader.py`.
+- **Cierre de 3.1 (26/10/2026):** evaluación repetida desde la caché, sin
+  cargar el modelo ni repetir inferencia; métricas idénticas y 58/0/0 en
+  WSL y en la suite local. Las dos figuras describen muestras del 30 %,
+  se transfieren con SHA-256 y se revisan visualmente. Las 65 celdas
+  guardadas de WSL coinciden en fuente con el notebook local; la
+  configuración y los algoritmos de 1 y 2 siguen sin cambios. El notebook
+  de desarrollo queda sin salidas; los PDF se recompilan con las figuras
+  corregidas. Los cambios permanecen sin commit ni push.
+- **Respaldo autorizado (26/10/2026):** la persona solicita hacer commit y
+  push del cierre de 3.1 a `origin/main` antes de trabajar en 3.2. Esta
+  autorización sustituye el límite anterior para ese respaldo; no cubre
+  elegir los modelos pendientes ni realizar el extra 3.3.
 
 ## Próximos pasos
 
@@ -123,9 +166,14 @@ Lista completa y notas de ejecución en
 2. Recordar a la persona que avise al equipo: el detector usa
    `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
 3. Punto 3: 3.1 ya tiene modelo, prompt y regla de ambigüedad confirmados.
-   Esperar a que la persona ejecute las celdas (GPU) y comparta la caché
-   antes de escribir el análisis. No elegir los modelos de 3.2 ni LoRA/DoRA
+   Su línea base, caché, figuras y análisis están completos; reutilizar la
+   caché para evaluar sin volver a cargar el modelo.
+   No elegir los modelos de 3.2 ni LoRA/DoRA
    sin confirmación del equipo; proponer opciones.
+   El kernel remoto ya está conectado: no exigir SSH, dominio ni cuenta
+   Cloudflare para continuar. Comprobar host y CUDA desde ese kernel antes
+   de experimentar; los comandos de terminal del Mac siguen siendo locales.
+   No reiniciar ni matar la sesión remota existente para cambiar de rama.
 4. Informe: `05-comparison.tex`, `06-conclusions.tex` y resumen final del
    notebook, después del punto 3.
 5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y
@@ -272,6 +320,14 @@ Lista completa y notas de ejecución en
   confirmación.
 - No descargar modelos grandes ni ejecutar inferencias largas sin
   confirmación.
+  La autorización del 26/10/2026 cubre la descarga y evaluación del modelo
+  ya confirmado para 3.1 en WSL. No cambia las decisiones pendientes de 3.2/3.3.
+- HF: autenticar interactivamente en WSL con un token dedicado de lectura,
+  preferiblemente de alcance limitado. No escribir tokens en celdas, argumentos,
+  salidas, Git ni chat. El login de HF se guarda fuera del repositorio; quienes
+  compartan la cuenta Linux pueden usarlo. Verificar solo presencia/autenticación,
+  nunca imprimir credenciales. Un token mejora límites de acceso/descarga,
+  no la velocidad de inferencia local.
 - No inventar ni estimar resultados: toda métrica, tabla o figura experimental
   del informe sale de la ejecución completa de su sección. La ejecución final
   completa queda pendiente mientras el punto 3 no esté implementado.

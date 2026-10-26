@@ -9,8 +9,55 @@ tokenizador y un modelo simulados.
 
 import pytest
 import torch
+import sys
+from types import SimpleNamespace
 
 from notebook_loader import notebook as punto3
+
+
+def test_load_llm_pins_tokenizer_and_weights_without_config_commit(monkeypatch, tmp_path):
+    """!
+    @brief Registra la revisión real aunque Transformers no conserve config._commit_hash.
+    @param monkeypatch Fixture que sustituye las bibliotecas por objetos sin red ni pesos.
+    @param tmp_path Caché simulada de Hugging Face.
+    @return None.
+    """
+    revision = "a" * 40
+    config = tmp_path / revision / "config.json"
+    config.parent.mkdir()
+    config.write_text("{}")
+    calls = {}
+
+    def tokenizer_from_pretrained(name, **kwargs):
+        """!
+        @brief Simula un tokenizador sin token de relleno.
+        @param name Identificador solicitado.
+        @param kwargs Opciones de carga que se verificarán.
+        @return Tokenizador simulado.
+        """
+        calls["tokenizer"] = (name, kwargs)
+        return SimpleNamespace(pad_token=None, eos_token="EOS")
+
+    def model_from_pretrained(name, **kwargs):
+        """!
+        @brief Simula pesos con config sin atributo de revisión.
+        @param name Identificador solicitado.
+        @param kwargs Opciones de carga que se verificarán.
+        @return Modelo simulado.
+        """
+        calls["model"] = (name, kwargs)
+        return SimpleNamespace(config=SimpleNamespace(), to=lambda device: None, eval=lambda: None)
+
+    monkeypatch.setitem(sys.modules, "huggingface_hub",
+                        SimpleNamespace(hf_hub_download=lambda *a, **k: str(config)))
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(
+        AutoTokenizer=SimpleNamespace(from_pretrained=tokenizer_from_pretrained),
+        AutoModelForCausalLM=SimpleNamespace(from_pretrained=model_from_pretrained),
+    ))
+    llm = punto3.load_llm("org/model", device="cpu")
+    assert llm.revision == revision
+    assert calls["tokenizer"][1]["revision"] == calls["model"][1]["revision"] == revision
+    assert llm.tokenizer.pad_token == "EOS"
 
 
 class _FakeTokenizer:

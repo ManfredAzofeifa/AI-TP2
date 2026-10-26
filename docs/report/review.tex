@@ -19,15 +19,17 @@
 \begin{abstract}
 Revisión interna de los puntos 1 y 2: regresión logística propia, PCA y
 detección por histogramas con MPNet de 768 características. Se verificaron
-30 corridas por método. Con el punto 3.1 implementado (sin ejecutar todavía
-en GPU), \texttt{pytest} da 56 pruebas superadas y ninguna pendiente.
+30 corridas por método. La línea base de 3.1 se ejecutó en la RTX 3080 Ti:
+Qwen2.5-3B-Instruct obtuvo F1 $0.5452\pm0.0090$ en 30 muestras.
+\texttt{pytest} y la celda del notebook dan 58 pruebas superadas.
 La auditoría corrigió la derivada de la sigmoide en cero y comparó
 alternativas de calibración. Ampliar la regresión no mejoró F1; calibrar el
 detector redujo falsas alarmas, pero dejó escapar más spam. La variante
 $D=2$ del equipo difiere de reutilizar $D=384$, como pide la lectura literal
 del enunciado: su aceptación sigue pendiente. Se mantienen las
-configuraciones vigentes. El punto 3.1 usa Qwen2.5-3B-Instruct; sus
-métricas se registrarán cuando se ejecute en GPU.
+configuraciones vigentes. Las falsas alarmas limitan la precisión de la
+línea base LLM. Tras cerrar 3.1, la persona autoriza respaldar sus cambios
+en main y continuar con 3.2; la selección de modelos y el extra 3.3 siguen pendientes.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -480,9 +482,9 @@ La persona eligió, el 26/10/2026, \texttt{Qwen/Qwen2.5-3B-Instruct} como
 en inglés (\texttt{DEFAULT\_PROMPT}) aplicado con la plantilla de chat del
 modelo, decodificación voraz y la regla de respuestas ambiguas: si la
 respuesta no contiene \texttt{spam} ni \texttt{ham}, cuenta como ham. Las
-celdas que cargan el modelo se ejecutan en una GPU CUDA (Google Colab u otra
-máquina con NVIDIA): la computadora de desarrollo tiene una GPU AMD y
-PyTorch solo para CPU.
+celdas que cargan el modelo se ejecutan en una GPU CUDA. Las pruebas iniciales
+del equipo se hicieron en CPU; la evaluación actual usa el servidor WSL con
+RTX 3080 Ti conectado a PyCharm mediante Quick Tunnel.
 
 \subsection{Lógica y pasos}
 \begin{enumerate}
@@ -516,8 +518,50 @@ negaciones y ambigüedad, exigencia de GPU, orden de las respuestas con un
 tokenizador y un modelo simulados, contrato de \texttt{classify\_messages},
 validación de la caché, muestreo de las métricas y resumen de respuestas.
 También se comprobó \texttt{generate\_responses} con un Qwen2 diminuto de
-pesos aleatorios creado localmente, sin descargas. Todavía no hay métricas:
-se completarán con la ejecución en GPU.
+pesos aleatorios creado localmente, sin descargas. Se agregan dos regresiones:
+revisión compartida por tokenizador y pesos sin depender de
+\texttt{config.\_commit\_hash}, y ejecución de pruebas con fixtures pytest.
+El ejecutor anterior llamaba las funciones sin argumentos: provocaba errores
+con \texttt{monkeypatch} y \texttt{tmp\_path}. Ahora usa pytest, importación
+por \texttt{importlib} y recarga de los módulos. La suite externa y la celda
+del notebook en WSL dan 58/0/0. Se sincronizó también el archivo guardado
+remoto: ejecutar el código del editor no actualizaba automáticamente el
+archivo que lee el cargador de pruebas.
+
+\subsection{Resultado de la línea base}
+Con revisión \texttt{aa8e72537993ba99e69dfaafa59ed015b17504d1},
+\texttt{bfloat16}, lote 16 y PyTorch \texttt{2.14.0+cu130}, se generaron
+5574 respuestas en 84.2 segundos. Los pesos ya estaban en caché; el tiempo
+excluye descarga y carga. Se reprodujo exactamente la caché anterior y se
+liberó el modelo de la GPU después de generar las respuestas.
+
+En 30 muestras estratificadas del 30\,\%, semillas 2026 a 2055, se obtuvo
+tasa de aciertos $0.7853\pm0.0073$ y F1 $0.5452\pm0.0090$. No hubo respuestas
+ambiguas. En todo el dataset hubo 717 verdaderos positivos, 1168 falsos
+positivos, 30 falsos negativos y 3659 verdaderos negativos. La sensibilidad
+para spam fue 96.0\,\%, pero su precisión fue 38.0\,\%: el exceso de ham
+marcado como spam explica el F1 bajo. Por muestra hubo, en promedio, 349.9
+falsos positivos y 9.0 falsos negativos.
+
+La regresión sin PCA conserva F1 $0.9641\pm0.0063$ y el detector vigente,
+$0.7043\pm0.0247$. Son referencias descriptivas: sus pruebas de particiones
+70/30 no son las mismas filas que las muestras de 3.1, por lo que no se
+afirma una comparación pareada. El prompt y la regla de interpretación se
+mantienen; no se ajustaron después de observar estos resultados. Se exportan
+las 30 filas, resúmenes, detalles de ejecución y dos figuras. El análisis
+también se incorpora al notebook y a la sección 3 del informe.
+
+\subsection{Cierre de verificación}
+La evaluación se repitió desde la caché mediante las celdas de PyCharm,
+sin cargar el modelo ni repetir inferencia. Las 30 muestras reprodujeron
+las métricas y la celda de pruebas volvió a dar 58/0/0. Se verificó la
+igualdad de las fuentes de las 65 celdas guardadas en WSL con las locales.
+Los subtítulos de las dos figuras ahora describen muestras del 30\,\%;
+las figuras y las seis tablas se transfirieron comprobando SHA-256.
+Se conserva un respaldo ejecutado antes de limpiar las salidas del notebook
+de desarrollo. La configuración y los algoritmos de los puntos 1 y 2 no
+cambian. Se recompilan ambos PDF con las figuras corregidas; los cambios
+permanecen sin commit ni push.
 
 \section{Puntos pendientes}
 El punto 2 está implementado; su conformidad literal requiere resolver la
@@ -528,13 +572,52 @@ La referencia con $D=384$ ya tiene 30 corridas; la persona
 confirmó mantener la configuración vigente y no adoptar las alternativas.
 \item Avisar al equipo que el detector vigente usa 2 componentes y la
 regresión 384; las constantes no se cambiaron durante la auditoría.
-\item Punto 3.1: ejecutar en GPU las celdas del modelo, copiar la caché
-de respuestas y redactar el análisis con los números reales. Después, 3.2
-(dos modelos más) y 3.3 (LoRA o DoRA), si el equipo lo decide.
+\item Punto 3.1 completo. La persona confirmó terminar solo esta línea base;
+3.2 (dos modelos más) y 3.3 (LoRA o DoRA) quedan pendientes de decisión.
 \item Completar la comparación de métodos y las conclusiones del informe.
 \item Confirmar integrantes y fecha de entrega; después, ejecución final
 completa, Doxygen, PDF final y \texttt{.zip}.
 \end{enumerate}
+
+\section{Continuación en main y kernel GPU remoto (26/10/2026)}
+La persona eligió Cloudflare Quick Tunnel sin cuenta ni dominio y conectó
+PyCharm a Jupyter mediante su token. El equipo comparte el host de a una
+persona o un trabajo GPU a la vez, sin kernels dedicados garantizados.
+El esquema SSH/Tailscale no es requisito; sus fuentes permanecen en
+\texttt{codex/wsl-gpu-host}, sin integrarlas a main.
+
+Los clones del Mac y de WSL volvieron a main, base \texttt{d520690}, mediante
+cambios de rama sin descartar archivos. Se comprobó que los notebooks
+conservaran su hash antes y después. La celda agregada por la persona en el
+Mac y los archivos auxiliares no versionados de PyCharm en WSL se conservaron.
+No se reinició ni se cerró el kernel remoto.
+
+Una consulta breve por las herramientas del notebook confirmó Linux/WSL2,
+el entorno virtual del proyecto, PyTorch \texttt{2.14.0+cu130}, CUDA disponible
+y la GPU NVIDIA GeForce RTX 3080 Ti. Esta comprobación verifica identidad y
+disponibilidad de CUDA, no una inferencia ni un entrenamiento. Las pruebas
+locales de main dan 48 superadas, una pendiente del punto 3 y cero fallidas;
+las tres pruebas de infraestructura de la otra rama no pertenecen a main.
+
+Después se incorpora \texttt{db5db2e}, con Qwen2.5-3B-Instruct, prompt y
+tratamiento de respuestas ya confirmados. Se descarta solo la celda local
+de diagnóstico CUDA, con respaldo, y se conservan las implementaciones y
+pruebas del equipo. Los conflictos en este registro y en las instrucciones
+se reconcilian; el PDF se regenera desde el TeX. Tras incorporar el commit
+había 56/0/0; después de las dos regresiones nuevas hay 58/0/0.
+La persona autoriza descargar y evaluar 3.1 en WSL. Los modelos adicionales
+y LoRA/DoRA siguen pendientes de decisión; no cambian las constantes de 1 y 2.
+Las órdenes de terminal del Mac siguen siendo locales; para trabajar con
+la GPU se usa el kernel remoto conectado. No se guardan URL ni tokens del
+túnel en el repositorio.
+
+La persona confirma el login interactivo de Hugging Face en WSL. Se usa un
+token dedicado de lectura y alcance limitado, almacenado fuera del repositorio;
+la comprobación compartida solo informa si está presente, nunca su valor.
+Quienes compartan el usuario Linux pueden usar esas credenciales. La
+autenticación evita los límites anónimos de acceso/descarga, pero no acelera
+la inferencia local. La suspensión accidental ya interrumpió la disponibilidad:
+preservar el estado exige mantener Windows, WSL y Jupyter vivos.
 
 \newpage
 \section{Registro de decisiones}
@@ -599,14 +682,26 @@ lo ambiguo como ham penaliza el spam no detectado y se informa su cantidad.\\
 de la evaluación. & La GPU local es AMD y PyTorch local es solo CPU; la caché
 de respuestas permite evaluar sin GPU y cambiar de modelo sin tocar otras
 celdas.\\
+26/10/2026 & Continuar en main con Jupyter remoto por Quick Tunnel. &
+Elección de la persona: sin cuenta ni dominio. PyCharm/MCP confirma WSL2,
+CUDA y RTX 3080 Ti. El equipo comparte la GPU de a un trabajo a la vez;
+se integra 3.1 de \texttt{db5db2e} y se autoriza su evaluación en WSL.\\
+26/10/2026 & Completar solo la línea base 3.1, sin cambiar el prompt. &
+Confirmación de la persona. Qwen logra F1 0.5452, con falsas alarmas altas.
+Se fija la revisión de pesos/tokenizador y se corrige el ejecutor pytest;
+58 pruebas pasan también en el notebook.\\
+26/10/2026 & Respaldar el cierre de 3.1 en origin/main antes de iniciar 3.2. &
+Solicitud expresa de la persona: se autoriza commit y push del estado
+verificado. Los modelos adicionales y el ajuste fino siguen sin decidir.\\
 \bottomrule
 \end{longtable}
 \normalsize
 
+\newpage
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} (26/10/2026, con el punto 3.1 implementado): 56
+\item \texttt{pytest} (26/10/2026, con el punto 3.1 implementado): 58
 superadas, 0 pendientes y 0 fallidas. Antes del punto 3.1 eran 48/1/0. La
 prueba de la derivada reprodujo el fallo antes de la corrección y pasa
 después. Las pruebas usan el backend \texttt{Agg} de Matplotlib.
@@ -620,7 +715,7 @@ metadatos, hash de textos ordenados, forma $(5574,768)$, tipo
 y pruebas, en 407 segundos. Se conservaron las salidas en una copia local
 ejecutada; el notebook del commit se limpia según las reglas de desarrollo;
 la celda opcional de auditoría quedó desactivada para futuras ejecuciones.
-La ejecución final completa sigue pendiente del punto 3.
+La ejecución final completa se realizará al cerrar la entrega.
 \item Las métricas de regresión reproducen exactamente las tablas anteriores.
 Las métricas del detector vigente también coinciden; hay diferencias
 numéricas pequeñas en umbrales y en validación con $D=384$ respecto de
@@ -633,8 +728,8 @@ experimentales a mano.
 \item Revisión e informe preliminar compilados mediante los dos comandos
 \texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
 de las páginas renderizadas.
-La ejecución en GPU del punto 3.1, la comparación global y las
-conclusiones finales permanecen pendientes.
+El punto 3.1 se ejecutó y documentó; la comparación global y las
+conclusiones finales permanecen pendientes, junto con la decisión sobre los extras.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 

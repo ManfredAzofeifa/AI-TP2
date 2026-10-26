@@ -1,0 +1,2 @@
+,model_revision,device,dtype,batch_size,seconds,torch
+Qwen/Qwen2.5-3B-Instruct,aa8e72537993ba99e69dfaafa59ed015b17504d1,NVIDIA GeForce RTX 3080 Ti (12.0 GiB),torch.bfloat16,16,84.2,2.14.0+cu130

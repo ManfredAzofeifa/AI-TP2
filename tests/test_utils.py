@@ -6,12 +6,37 @@
 import math
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
 from notebook_loader import notebook as utils
 
 TARGETS = torch.tensor([0] * 80 + [1] * 20)
+
+
+def test_notebook_test_runner_supplies_pytest_fixtures(tmp_path, monkeypatch):
+    """!
+    @brief El ejecutor del notebook usa fixtures reales en lugar de llamar test_* sin argumentos.
+    @param tmp_path Carpeta temporal del módulo de prueba simulado.
+    @param monkeypatch Fixture que evita mostrar tablas durante esta prueba.
+    @return None.
+    """
+    path = tmp_path / "test_fixture_probe.py"
+    path.write_text('''def test_fixture_support(tmp_path, monkeypatch):
+    """!
+    @brief Comprueba fixtures de pytest dentro del ejecutor del notebook.
+    @param tmp_path Carpeta temporal creada por pytest.
+    @param monkeypatch Fixture de modificaciones temporales.
+    @return None.
+    """
+    monkeypatch.setenv("TP2_FIXTURE_PROBE", "ok")
+    assert tmp_path.is_dir()
+''')
+    monkeypatch.setattr(utils, "display_table", lambda *a, **k: None)
+    result = utils.run_tests(SimpleNamespace(__file__=str(path), __name__="test_fixture_probe"))
+    assert result["estado"].tolist() == ["superada"]
+    assert result["prueba"].tolist() == ["test_fixture_support"]
 
 
 # ---------------------------------------------------------------------------
