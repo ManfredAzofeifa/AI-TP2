@@ -17,6 +17,19 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
 ## Estado actual
 
+- **Ejecución completa con salidas (27/10/2026):** kernel WSL nuevo, las 46
+  celdas de código en orden (contadores 1–46), sin errores. Reutilizó las
+  cachés de MPNet, de los tres LLM y de 3.3: no cargó modelos ni entrenó.
+  Duró 37.5 minutos; las corridas de 1.4 y 1.5 ocuparon 19.4 y 16.5, con un
+  hilo de CPU (`torch.set_num_threads(1)`); sus resúmenes coinciden con el informe
+  (F1 0.9641, ΔF1 −0.0004/−0.0045/−0.1796, detector −0.2597/−0.0802), igual
+  que 3.1–3.3 y la comparación global, que se ejecutó por primera vez.
+  Celda de pruebas: 74/0/0. Segunda entrega, con el notebook ejecutado:
+  `tp2_detector_spam_entrega_con_salidas.zip` (SHA-256 `702ea61f…aa0e2c5e`),
+  armada en `build/entrega-con-salidas/`; respaldo en
+  `build/notebook-backups/tp2_detector_spam.ejecutado-20261027.ipynb`.
+  El notebook del repositorio sigue sin salidas. En la figura de comparación
+  se superponen los nombres largos de los LLM en el eje x (cosmético).
 - **Entrega realizada (26/10/2026):** `.zip` armado con `./build_submission.sh`
   (SHA-256 `11a520305d942c453f860b3387dcfe8de646ddd8e73a816c9c41a2633997a936`),
   con `tp2_detector_spam.pdf` (35 páginas, SHA-256 `c07730b4…ebedac`),
@@ -161,11 +174,9 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 El trabajo se entregó el 26/10/2026. Si se retoma (por ejemplo, para el
 portafolio), estas mejoras quedan opcionales:
 
-1. **Ejecución completa con salidas.** Reiniciar el kernel y ejecutar todo
-   en una máquina con las cachés de `data/processed/` (MPNet, respuestas de
-   los tres LLM y el experimento LoRA): no descarga ni reentrena modelos,
-   pero repite las 30 corridas de 1 y 2 y borra y regenera `results/`.
-   Guardar esa versión aparte; el notebook de desarrollo se versiona sin salidas.
+1. **Ejecución completa con salidas:** hecha el 27/10/2026 (ver estado
+   actual). Opcional: acortar las etiquetas del eje x en la figura de
+   comparación y volver a ejecutar esa celda.
 2. **Redacción del notebook.** Retirar menciones al proceso del equipo, al
    repositorio y a WSL/PyCharm en las celdas de texto y comentarios.
 3. **Doxygen** según `README.md`, "Documentación interna".
@@ -493,15 +504,16 @@ Registro de verificaciones realizadas y trabajo pendiente:
       estilo común están en `codex/audit-puntos-1-2`. Sin descargas.
 - [x] 30 corridas por alternativa adicional, con selección interna de cada
       entrenamiento y tablas exportadas desde la celda opcional del notebook.
-- [ ] Ejecución final de principio a fin al cerrar la entrega.
+- [x] Ejecución final de principio a fin (27/10/2026): 46 celdas sin errores,
+      resultados iguales al informe y 74/0/0 en la celda de pruebas.
 - [ ] Generación de Doxygen (no estaba instalado).
 
 ## Checklist de entrega
 
 Estado al entregar (26/10/2026):
 
-- [ ] El notebook corre de principio a fin sin errores desde un kernel limpio
-      (no se ejecutó completo antes de la entrega; se entregó sin salidas).
+- [x] El notebook corre de principio a fin sin errores desde un kernel limpio
+      (27/10/2026, después de la entrega; segunda entrega con salidas).
 - [x] `pytest` sin fallidas: 77/0/0 en el proyecto y 74/0/0 en la entrega;
       las cuatro pruebas obligatorias de la regresión logística pasan.
 - [x] PDF generado con `./build_pdf.sh` en `submission/tp2_detector_spam.pdf`.

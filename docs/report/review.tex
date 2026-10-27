@@ -756,12 +756,28 @@ da 74/0/0. Se revisaron el índice de figuras y las secciones nuevas. El
 \texttt{11a52030\ldots 33997a936}; el PDF, \texttt{c07730b4\ldots ebedac}.
 \end{itemize}
 
+\section{Ejecución completa con salidas (27/10/2026)}
+Después de la entrega se sincronizaron en WSL el notebook y las pruebas de
+main, se reinició el kernel y se ejecutaron las 46 celdas de código en orden,
+sin errores, en 37.5 minutos. Se reutilizaron las cachés de MPNet, de los
+tres modelos de lenguaje y de 3.3: no se cargó ningún modelo ni se entrenó.
+Las corridas de 1.4 y 1.5 tardaron 19.4 y 16.5 minutos con un hilo de CPU;
+la máquina de 16 núcleos estaba libre, de modo que el tiempo proviene de
+\texttt{torch.set\_num\_threads(1)}, que se conservó para no alterar el
+orden de las sumas. Los resúmenes coinciden con el informe: F1 0.9641 sin
+PCA; $\Delta$F1 $-0.0004$, $-0.0045$ y $-0.1796$; detector $-0.2597$ y
+$-0.0802$ frente a la regresión; 3.1--3.3 iguales desde caché. La celda de
+comparación global se ejecutó por primera vez y la celda de pruebas dio
+74/0/0. Con el notebook ejecutado se armó una segunda entrega
+(\texttt{tp2\_detector\_spam\_entrega\_con\_salidas.zip}); el notebook del
+repositorio se conserva sin salidas. En la figura de comparación se
+superponen los nombres largos de los modelos de lenguaje (cosmético).
+
 \section{Puntos pendientes}
 El trabajo está entregado. Quedan como mejoras opcionales (detalle en
 \texttt{TODO.md}):
 \begin{enumerate}
-\item Ejecutar el notebook completo con salidas en una máquina con las
-cachés; no descarga ni reentrena modelos, pero repite las corridas de 1 y 2.
+\item Acortar las etiquetas del eje x de la figura de comparación global.
 \item Retirar del notebook la redacción de proceso interno, con el mismo
 criterio que el informe.
 \item Generar Doxygen.
@@ -907,6 +923,9 @@ Solicitud expresa de la persona: commit y push, como en 3.2.\\
 26/10/2026 & Entregar PDF, fuentes LaTeX, notebook sin salidas y
 \texttt{tests/}. & Elección de la persona: las pruebas se califican y el
 notebook las importa; la ejecución completa no cabía antes del plazo.\\
+27/10/2026 & Ejecución completa en WSL desde caché y segunda entrega con
+salidas. & Solicitud de la persona; un hilo de CPU para conservar los
+resultados exactos; el notebook versionado sigue sin salidas.\\
 26/10/2026 & Informe impersonal y sin referencias al repositorio; completar
 comparación y conclusiones. & Solicitud de la persona: el informe describe
 solo lo entregado; la plataforma de sincronización no forma parte de él.\\
@@ -949,7 +968,7 @@ experimentales a mano.
 de las páginas renderizadas.
 Los puntos 3.1, 3.2 y 3.3 se ejecutaron y documentaron, junto con la
 comparación global y las conclusiones. La ejecución completa del notebook
-con salidas no se realizó antes de la entrega.
+con salidas se realizó el 27/10/2026, después de la entrega, sin errores.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 

@@ -44,6 +44,19 @@ verificación pendiente de `TODO.md`.
 
 ## Estado actual
 
+- **Ejecución completa con salidas (27/10/2026):** kernel WSL nuevo, las 46
+  celdas de código en orden (contadores 1–46), sin errores. Reutilizó las
+  cachés de MPNet, de los tres LLM y de 3.3: no cargó modelos ni entrenó.
+  Duró 37.5 minutos; las corridas de 1.4 y 1.5 ocuparon 19.4 y 16.5, con un
+  hilo de CPU (`torch.set_num_threads(1)`); sus resúmenes coinciden con el informe
+  (F1 0.9641, ΔF1 −0.0004/−0.0045/−0.1796, detector −0.2597/−0.0802), igual
+  que 3.1–3.3 y la comparación global, que se ejecutó por primera vez.
+  Celda de pruebas: 74/0/0. Segunda entrega, con el notebook ejecutado:
+  `tp2_detector_spam_entrega_con_salidas.zip` (SHA-256 `702ea61f…aa0e2c5e`),
+  armada en `build/entrega-con-salidas/`; respaldo en
+  `build/notebook-backups/tp2_detector_spam.ejecutado-20261027.ipynb`.
+  El notebook del repositorio sigue sin salidas. En la figura de comparación
+  se superponen los nombres largos de los LLM en el eje x (cosmético).
 - **Entrega y cierre (26/10/2026):** `.zip` entregado (SHA-256
   `11a520305d942c453f860b3387dcfe8de646ddd8e73a816c9c41a2633997a936`), con
   PDF de 35 páginas, fuentes LaTeX y sus 25 figuras, notebook sin salidas y
@@ -211,9 +224,8 @@ verificación pendiente de `TODO.md`.
 El trabajo está entregado. Mejoras opcionales, detalladas en
 [TODO.md](TODO.md#próximos-pasos-24102026):
 
-1. Ejecución completa con salidas en una máquina con las cachés de
-   `data/processed/`; no descarga ni reentrena modelos, pero repite las
-   corridas de 1 y 2 y regenera `results/`. Pedir confirmación antes.
+1. Ejecución completa con salidas: hecha el 27/10/2026. Repetirla tarda
+   unos 40 minutos con las cachés de WSL y regenera `results/` en WSL.
 2. Retirar del notebook la redacción de proceso interno (equipo, repositorio,
    WSL/PyCharm), con el mismo criterio que el informe.
 3. Doxygen. 4. Opinión del docente sobre D=2 frente a D=384 en 2.1.
