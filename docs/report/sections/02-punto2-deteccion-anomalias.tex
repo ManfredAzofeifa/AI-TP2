@@ -1,7 +1,7 @@
 \section{Detección de anomalías: umbral de verosimilitud}
 \label{sec:punto2}
 
-% Punto 2 (30 puntos). Implementación: notebooks/tp2_detector_spam.ipynb. Pruebas: tests/test_punto2.py.
+% Punto 2 (30 puntos). Implementación en el notebook; pruebas en tests/test_punto2.py.
 
 \subsection{Densidades por histograma}
 
@@ -19,7 +19,7 @@ densidad mínima $\varepsilon=10^{-12}$, de modo que su término vale
 $\log\varepsilon\approx-27.6$. Un mensaje con $s(\mathbf{x})$ menor que el
 umbral $\tau$ se marca como fuera de la distribución, es decir, como spam.
 
-\paragraph{Decisiones del equipo.} Se tomaron el 24 de octubre de 2026:
+\paragraph{Decisiones de diseño.}
 \begin{itemize}
     \item \textbf{Datos de las densidades.} Solo los ham del entrenamiento.
     Los histogramas describen la distribución normal y el spam, que no
@@ -44,11 +44,11 @@ las 30 particiones se separó la validación interna de 1.4 (20~\% estratificado
 del entrenamiento). Con el resto se ajustaron el PCA y el detector, y este se
 evaluó en la validación. La Tabla~\ref{tab:seleccion-d} resume el resultado.
 
-\paragraph{Alcance frente al enunciado.} Usar $D=2$ es una decisión del
-equipo que favorece al detector, pero difiere de reutilizar $D=384$, la
-dimensión adoptada en 1.5. Queda pendiente acordar con el docente si se acepta
-esa variante. La auditoría adicional conserva ambos casos para hacer visible
-la diferencia; las métricas de $D=2$ no sustituyen las de $D=384$.
+\paragraph{Alcance frente al enunciado.} Usar $D=2$ favorece al detector,
+pero difiere de reutilizar $D=384$, la dimensión adoptada en 1.5, como pide
+la lectura literal del apartado 2.1. Por eso el análisis adicional de la
+Sección~\ref{sec:auditoria-detector} informa ambos casos; las métricas de
+$D=2$ no sustituyen las de $D=384$.
 
 \paragraph{Alcance de la selección.} Cada validación excluye la prueba de
 su propia corrida, pero las particiones se solapan: una fila de prueba puede
@@ -92,7 +92,7 @@ con 2, se vuelve negativa desde 169, vale $-2.8$ con 192 y $-41.1$ con 384.
 Al sumar cientos de componentes poco informativas, sus aportes pequeños pero
 sistemáticos superan la señal de las primeras y el spam termina pareciendo
 más normal que el ham. La suma alcanza su máximo, 14.2, con 11 componentes;
-ese valor no se consideró porque el equipo restringió sus candidatos a los
+ese valor no se consideró porque los candidatos se restringieron a los
 tres casos ensayados en 1.5. El enunciado no prescribe esa cuadrícula de
 búsqueda para el detector: pide reutilizar la dimensión óptima anterior.
 
@@ -253,9 +253,10 @@ este dataset, el modelo supervisado es claramente mejor.
 El cuantil empírico no garantiza el mismo porcentaje en datos futuros; los
 empates, el tamaño de la reserva y los cambios de distribución lo afectan.
 
-\subsection{Auditoría de dimensión, intervalos y cuantil}
+\subsection{Análisis adicional de dimensión, intervalos y cuantil}
+\label{sec:auditoria-detector}
 Se ejecutaron otras 30 corridas por variante, con las mismas semillas.
-La referencia $D=384$ usa los 30 intervalos y el cuantil 5~\% vigentes.
+La referencia $D=384$ usa los 30 intervalos y el cuantil 5~\% de la configuración principal.
 La alternativa calibrada elige, dentro del entrenamiento de cada corrida,
 $D\in\{384,192,2\}$, intervalos $\{15,30,60\}$ y cuantiles
 $\{0.01,0.025,0.05,0.1\}$. Se maximiza el F1 de validación; los empates
@@ -267,7 +268,7 @@ presenta medias y desviaciones entre las 30 particiones.
 \begin{table}[H]
     \centering
     \caption{Referencias y alternativa del detector. Los errores son
-    promedios por prueba; las constantes oficiales permanecen sin cambios.}
+    promedios por prueba; la configuración principal no cambia.}
     \label{tab:auditoria-detector}
     \small
     \begin{tabular}{lcccc}
@@ -275,7 +276,7 @@ presenta medias y desviaciones entre las 30 particiones.
         Variante & Tasa de aciertos & F1 & Ham marcado & Spam escapado \\
         \midrule
         $D=384$, referencia & $0.7892\pm0.0119$ & $0.0386\pm0.0145$ & 135.5 & 216.9 \\
-        $D=2$, vigente & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 64.0 \\
+        $D=2$, elegida & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ & 70.5 & 64.0 \\
         Calibrada por corrida & $0.9321\pm0.0061$ & $0.7173\pm0.0441$ & 35.4 & 78.1 \\
         \bottomrule
     \end{tabular}
@@ -283,13 +284,13 @@ presenta medias y desviaciones entre las 30 particiones.
 
 La alternativa elige $D=2$ en las 30 corridas. Elige cuantil 1~\% o
 2.5~\% en 27 y 5~\% en 3; no conserva siempre la fracción objetivo
-vigente. Su F1 mejora en 24 corridas y empeora en 6, con diferencia pareada
+de 5~\%. Su F1 mejora en 24 corridas y empeora en 6, con diferencia pareada
 $+0.0130\pm0.0519$. Reduce aproximadamente a la mitad los falsos positivos,
 pero deja escapar 14.1 spam más por prueba y aumenta la dispersión de F1.
 El F1 medio de validación es 0.7480 frente a 0.7173 en prueba: ampliar la
-selección también puede sobreajustar una validación finita. No se adopta
-automáticamente: el equipo debe decidir si acepta ese intercambio y el uso
-de etiquetas de validación para elegir intervalos y cuantil.
+selección también puede sobreajustar una validación finita. No se adoptó:
+implicaría aceptar ese intercambio y usar etiquetas de validación para elegir
+intervalos y cuantil.
 
 La referencia $D=384$ hace explícito el resultado de reutilizar la dimensión
 de 1.5, aun cuando sea desfavorable. Las alternativas se investigaron después

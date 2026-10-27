@@ -83,3 +83,9 @@ checkpoints/
 *.toc
 *.xdv
 _minted-*/
+
+# Copias generadas por build_submission.sh y el .zip entregado
+/submission/informe/
+/submission/notebooks/
+/submission/tests/
+/tp2_detector_spam_entrega.zip

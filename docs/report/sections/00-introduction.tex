@@ -15,14 +15,16 @@ enfoques implementados en PyTorch \cite{paszke2019pytorch}:
     \item clasificación con modelos grandes de lenguaje.
 \end{enumerate}
 
-La implementación completa vive en el notebook
+La implementación completa está en el notebook
 \texttt{tp2\_detector\_spam.ipynb}, organizado en celdas de definiciones,
-configuración, experimentos y análisis. Las pruebas externas cargan las
-mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
-figuras y tablas provienen de la ejecución completa de sus secciones. La
-línea base 3.1 ya se evaluó en GPU; 3.2 agrega dos modelos con cuantización
-NF4 y 3.3 ajusta Qwen 14B con LoRA en una partición fija, con F1 de 0.9708
-en su prueba reservada frente a 0.7120 sin ajuste.
+configuración, experimentos y análisis. Las pruebas unitarias, entregadas
+en la carpeta \texttt{tests/} junto al notebook, cargan las mismas
+definiciones sin ejecutar descargas ni experimentos. Las métricas, figuras y
+tablas de este informe provienen de la ejecución de las secciones del
+notebook. El punto 3 evalúa una línea base sin ajuste (3.1), dos modelos
+adicionales con cuantización NF4 (3.2) y el ajuste de Qwen 14B con LoRA en
+una partición fija (3.3), que eleva el F1 de 0.7120 a 0.9708 en su prueba
+reservada.
 
 \subsection{Protocolo común}
 
@@ -39,20 +41,20 @@ en su prueba reservada frente a 0.7120 sin ajuste.
     \item \textbf{Hiperparámetros de la regresión logística.} Calibrados por
     F1 en una validación interna de cada corrida, tomada solo de su entrenamiento
     (Sección~\ref{sec:calibracion}).
-    \item \textbf{Dimensión óptima del PCA.} El equipo confirmó $D=384$ el
-    24 de octubre de 2026 para la regresión logística, la mitad de las 768
-    características (Sección~\ref{sec:pca}).
+    \item \textbf{Dimensión óptima del PCA.} Se eligió $D=384$ para la
+    regresión logística, la mitad de las 768 características
+    (Sección~\ref{sec:pca}).
     \item \textbf{Detector de anomalías.} Entre los casos de 1.5, el detector
     de histogramas usa $D=2$, elegida en una validación interna de los 30
     entrenamientos; las densidades se construyen solo con ham y el umbral es
     el cuantil 5~\% de un 20~\% de ham reservado (Sección~\ref{sec:punto2}).
     Esta variante difiere de reutilizar $D=384$, como pide la lectura literal
-    del apartado 2.1; su aceptación debe validarse con el docente.
+    del apartado 2.1; por eso también se informa el detector con $D=384$.
     \item Punto 3.1: \texttt{Qwen/Qwen2.5-3B-Instruct}, prompt sin ejemplos
     en inglés y decodificación voraz; las respuestas ambiguas cuentan como
     ham. Las 30 muestras estratificadas del 30~\% usan las semillas de los
-    puntos 1 y 2 (Sección~\ref{sec:punto3}). Para 3.2 se confirmaron
+    puntos 1 y 2 (Sección~\ref{sec:punto3}). Para 3.2 se usan
     Mistral-7B-Instruct-v0.3 y Qwen2.5-14B-Instruct, ambos con NF4 de 4 bits
-    y cálculo bfloat16. Para 3.3 se confirmó ajustar Qwen 14B con LoRA
-    sobre NF4 y un entrenamiento con prueba reservada (Sección~\ref{sec:punto33}).
+    y cálculo bfloat16. En 3.3 se ajusta Qwen 14B con LoRA sobre NF4, con un
+    entrenamiento y una prueba reservada (Sección~\ref{sec:punto33}).
 \end{itemize}

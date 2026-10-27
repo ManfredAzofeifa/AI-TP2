@@ -6,7 +6,9 @@ pull request que hace el cambio. Los agentes de IA siguen
 [AGENTS.md](AGENTS.md); si cambia el estado, una tarea o una regla, actualizar
 también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
-- **Entrega:** martes 20 de octubre de 2026, por TEC Digital.
+- **Entrega:** realizada el 26/10/2026 por TEC Digital (el enunciado fijaba
+  el martes 20 de octubre). El proyecto quedó cerrado; ver
+  [Estado actual](#estado-actual).
 - **Modo de trabajo:** grupos de 3 personas.
 - **Entregable:** un `.zip` con el código fuente LaTeX, el PDF y el notebook
   debidamente documentado (ver [Checklist de entrega](#checklist-de-entrega)).
@@ -15,6 +17,19 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
 ## Estado actual
 
+- **Entrega realizada (26/10/2026):** `.zip` armado con `./build_submission.sh`
+  (SHA-256 `11a520305d942c453f860b3387dcfe8de646ddd8e73a816c9c41a2633997a936`),
+  con `tp2_detector_spam.pdf` (35 páginas, SHA-256 `c07730b4…ebedac`),
+  `informe/` (fuentes LaTeX y sus 25 figuras), `notebooks/` (notebook sin
+  salidas) y `tests/` (74 pruebas). El informe se redactó en impersonal y sin
+  referencias al repositorio; se completaron la comparación global y las
+  conclusiones. Se verificó compilar `informe/` y ejecutar `tests/` desde una
+  copia aislada: sin citas ni referencias indefinidas, 74/0/0. Las 3 pruebas
+  del ejecutor auxiliar pasaron a `tests/test_partial_runner.py`, que no se
+  entrega; el proyecto completo da 77/0/0. El notebook busca su raíz por
+  `tests/notebook_loader.py` y, sin ella, usa el directorio actual.
+  No se hicieron antes de la entrega: la ejecución completa con salidas,
+  Doxygen y retirar del notebook la redacción de proceso interno.
 - **3.3 completo (26/10/2026):** respaldo 3.2 publicado en
   `origin/main` (`88b6ee9`). Selección confirmada: Qwen 14B con LoRA sobre
   NF4, PEFT y bucle explícito en PyTorch; un ajuste con partición 70/30
@@ -75,9 +90,8 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   ambiguas; 1168 ham marcados como spam y 30 spam escapados en todo el dataset.
   Las respuestas se guardan en `data/processed/llm/` y la evaluación (30
   muestras del 30 %) se ejecuta sin GPU a partir de esa caché.
-- **Pendiente:** comparación/conclusiones globales y cierre. 3.1, 3.2 y
-  3.3 están en `origin/main`; el cierre verificado de 3.3 se publicó por
-  solicitud expresa de la persona (26/10/2026).
+- **Pendiente:** nada obligatorio; el trabajo se entregó. Ver
+  [Próximos pasos](#próximos-pasos-24102026) para mejoras opcionales.
 - **3.2 completo (26/10/2026):** respaldo de 3.1 publicado en `origin/main`
   (`2534503`). La persona confirmó Mistral-7B-Instruct-v0.3 y
   Qwen2.5-14B-Instruct, ambos NF4 con doble cuantización y cálculo bfloat16.
@@ -144,41 +158,19 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
 ## Próximos pasos (24/10/2026)
 
-Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
+El trabajo se entregó el 26/10/2026. Si se retoma (por ejemplo, para el
+portafolio), estas mejoras quedan opcionales:
 
-1. **Resolver con el docente el alcance del 2.1.** La persona confirmó
-   conservar la configuración vigente y dejar las alternativas como sugerencias.
-   El detector vigente usa D=2; la referencia literal con D=384 ya se evaluó
-   en 30 corridas (F1 0.0386). La calibración adicional mejora el F1 medio
-   del detector a 0.7173, pero deja escapar más spam; no se adoptó.
-   Ampliar la cuadrícula de regresión no mejoró F1 (0.9636 frente a 0.9641).
-   Puntos 1 y 2 y pruebas ya se ejecutaron desde un kernel nuevo, con salidas
-   conservadas en la copia local ejecutada y tabla 48/1/0. Las 18 figuras
-   regeneradas e inspeccionadas se conservan en la rama de auditoría; main
-   mantiene sus PNG previos y recompila los PDF con ellos.
-   La ejecución final de principio a fin se realizará al cerrar la entrega.
-   La configuración borra las exportaciones, incluidas las tablas de auditoría;
-   para regenerar estas últimas activar la celda opcional con autorización.
-   Mantener `RUN_METRIC_AUDIT = False` cuando no se quieran repetir esas corridas.
-   Sin caché, MPNet puede requerir descarga y más de 10 minutos de extracción:
-   pedir confirmación antes de descargar o ejecutar corridas largas.
-2. **Avisar a todo el equipo** que el detector del punto 2 usa
-   `ANOMALY_PCA_DIMENSIONS = 2` y no 384; la regresión conserva
-   `OPTIMAL_PCA_DIMENSIONS = 384`.
-3. **Punto 3 (10 puntos + 20 extra).** 3.1 completo en la GPU WSL:
-   respuestas en caché local, 30 muestras, figuras y análisis verificados.
-   Reutilizar la caché para evaluar sin cargar el modelo. La persona
-   respaldó primero 3.1 en `origin/main` y confirmó Mistral 7B y Qwen 14B
-   en NF4 para 3.2. El piloto de 3.3 está completo: F1 0.7120 → 0.9708 en
-   su prueba reservada; reutilizar su caché y no repetir el ajuste.
-4. **Informe:** completar `05-comparison.tex` (todos los métodos) y
-   `06-conclusions.tex`, y el resumen de conclusiones al final del notebook.
-   Dependen del punto 3.
-5. **Confirmar los integrantes** (se copiaron del TP1) y la **fecha de
-   entrega**: el enunciado dice martes 20 de octubre y este registro es del
-   24; si hay prórroga, corregirla aquí, en `AGENTS.md` y en `README.md`.
-6. **Cierre:** generar Doxygen, el PDF final con `./build_pdf.sh` y el `.zip`
-   ([Checklist de entrega](#checklist-de-entrega)).
+1. **Ejecución completa con salidas.** Reiniciar el kernel y ejecutar todo
+   en una máquina con las cachés de `data/processed/` (MPNet, respuestas de
+   los tres LLM y el experimento LoRA): no descarga ni reentrena modelos,
+   pero repite las 30 corridas de 1 y 2 y borra y regenera `results/`.
+   Guardar esa versión aparte; el notebook de desarrollo se versiona sin salidas.
+2. **Redacción del notebook.** Retirar menciones al proceso del equipo, al
+   repositorio y a WSL/PyCharm en las celdas de texto y comentarios.
+3. **Doxygen** según `README.md`, "Documentación interna".
+4. **Alcance de 2.1.** El informe presenta D=2 (elegida) y D=384 (lectura
+   literal); queda abierta la opinión del docente sobre la variante.
 
 ## Cómo trabajar
 
@@ -420,10 +412,11 @@ nueve veces las inferencias de reclasificar las 30 muestras del 30 %.
 
 ## Integración
 
-- [ ] Completar las constantes de la celda de configuración del notebook.
-- [ ] Analizar la sección "Comparación de resultados" del notebook.
+- [x] Completar las constantes de la celda de configuración del notebook.
+- [ ] Analizar la sección "Comparación de resultados" del notebook (el análisis
+      quedó en `05-comparison.tex`; la celda no se ejecutó).
 - [x] Informe: `00-introduction.tex`, con alcance auditado de 1 y 2.
-- [ ] Informe: `05-comparison.tex` y `06-conclusions.tex`, después del punto 3.
+- [x] Informe: `05-comparison.tex` y `06-conclusions.tex` (26/10/2026).
 - [ ] Mantener al día el "Estado" del encabezado del notebook y la lista
       final de pendientes.
 - [ ] Generar Doxygen (`README.md`, "Documentación interna") y copiar
@@ -476,8 +469,10 @@ Registro de verificaciones realizadas y trabajo pendiente:
       punto 2 eran 23 páginas. La versión auditada y la revisión interna
       compilan y se revisaron visualmente. La versión con 3.1 sigue siendo
       preliminar: faltan la comparación global, las conclusiones y el cierre.
-- [ ] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
-      entrega, con todos los puntos terminados.
+- [x] Generar `submission/tp2_detector_spam.pdf` con `./build_pdf.sh` en la
+      entrega, con todos los puntos terminados (35 páginas, 26/10/2026).
+- [x] Compilar `submission/informe/` y ejecutar `submission/tests/` desde una
+      copia aislada: sin referencias indefinidas y 74/0/0.
 - [x] Migración del notebook: `nbformat`, IDs únicos y AST válidos;
       pruebas externas sobre las mismas definiciones, 30 superadas y 2 pendientes.
 - [x] Celda de pruebas del notebook (antes del punto 2): 30 superadas, 2
@@ -503,12 +498,14 @@ Registro de verificaciones realizadas y trabajo pendiente:
 
 ## Checklist de entrega
 
-- [ ] El notebook corre de principio a fin sin errores desde un kernel limpio.
-- [ ] `pytest` no tiene pruebas fallidas y las cuatro pruebas obligatorias de
-      la regresión logística siguen pasando.
-- [ ] PDF generado con `./build_pdf.sh` en `submission/tp2_detector_spam.pdf`.
-- [ ] Doxygen generado y copiado a `submission/doxygen/html`.
-- [ ] El `.zip` incluye: `notebooks/tp2_detector_spam.ipynb` ejecutado,
-      `tests/` (verificación externa; el notebook concentra la implementación),
-      `requirements.txt`, `docs/report/`, `results/figures/` y el PDF.
-- [ ] Subir el `.zip` a TEC Digital antes del martes 20 de octubre.
+Estado al entregar (26/10/2026):
+
+- [ ] El notebook corre de principio a fin sin errores desde un kernel limpio
+      (no se ejecutó completo antes de la entrega; se entregó sin salidas).
+- [x] `pytest` sin fallidas: 77/0/0 en el proyecto y 74/0/0 en la entrega;
+      las cuatro pruebas obligatorias de la regresión logística pasan.
+- [x] PDF generado con `./build_pdf.sh` en `submission/tp2_detector_spam.pdf`.
+- [ ] Doxygen generado y copiado a `submission/doxygen/html` (no se generó).
+- [x] El `.zip` incluye el PDF, las fuentes LaTeX con sus figuras, el notebook
+      y `tests/`, armados con `./build_submission.sh`.
+- [x] `.zip` subido a TEC Digital (26/10/2026).

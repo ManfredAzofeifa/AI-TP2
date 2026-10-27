@@ -1,7 +1,7 @@
 \section{Aprendizaje supervisado: regresión logística}
 \label{sec:punto1}
 
-% Punto 1 (60 puntos). Implementación: notebooks/tp2_detector_spam.ipynb. Pruebas: tests/test_punto1.py.
+% Punto 1 (60 puntos). Implementación en el notebook; pruebas en tests/test_punto1.py.
 
 \subsection{Evaluación del modelo}
 
@@ -201,7 +201,7 @@ independientes.
     \label{fig:calibracion}
 \end{figure}
 
-En la primera corrida, la validación eligió $\alpha=20$ y 4000 épocas,
+En la primera corrida (Figura~\ref{fig:calibracion}), la validación eligió $\alpha=20$ y 4000 épocas,
 con F1 de 0.9714. Las 30 selecciones no fueron iguales: las tasas 10, 20 y
 50 aparecieron en 6, 10 y 14 corridas, respectivamente; las épocas variaron
 entre 500 y 4000. En 15 corridas se seleccionó el máximo de 4000 épocas y en
@@ -305,7 +305,7 @@ Con 384 componentes se conserva el 96.16~\% de la varianza; con 192, el 84.13~\%
 \end{figure}
 
 Con 2 dimensiones se representan todos los mensajes en el plano
-(Figura~\ref{fig:pca-2d}). Para 192 y 384, el segundo panel muestra cuánto
+(Figura~\ref{fig:pca-2d}). Para 192 y 384 (Figura~\ref{fig:pca-alta}), el segundo panel muestra cuánto
 separan las clases las coordenadas de cada componente, usando
 \[
     |d_j|=\frac{|\bar z_{j,\text{spam}}-\bar z_{j,\text{ham}}|}
@@ -369,7 +369,7 @@ de los PCA ajustados de manera independiente dentro de cada corrida.
     \label{fig:pca-f1}
 \end{figure}
 
-Con 384 componentes, el cambio medio de F1 fue de $-0.0004$, con
+Con 384 componentes (Figura~\ref{fig:pca-f1}), el cambio medio de F1 fue de $-0.0004$, con
 una desviación pareada de 0.0030; el F1 fue menor que sin PCA en 14 de las
 30 corridas. La diferencia media es pequeña y cambia de signo entre
 particiones, aunque esto no constituye una prueba formal de equivalencia.
@@ -392,8 +392,8 @@ resultado también depende de una validación finita y de una búsqueda
 limitada. En particular, la tasa máxima 50 se eligió en 15 de las corridas
 con $k=384$ y en 19 con $k=192$.
 
-\paragraph{$D$ óptima.} El equipo confirmó
-\texttt{OPTIMAL\_PCA\_DIMENSIONS = 384} el 24 de octubre de 2026.
+\paragraph{$D$ óptima.} Se eligió
+\texttt{OPTIMAL\_PCA\_DIMENSIONS = 384}.
 Esta elección reduce a la mitad las 768 características y conserva el
 96.16~\% de la varianza del PCA descriptivo. El F1 medio de 0.9637 queda
 próximo al 0.9641 del caso sin PCA, con diferencia media pareada de
@@ -403,27 +403,27 @@ observada para la regresión logística. El detector de histogramas del
 punto 2 compara estos mismos casos con su propia validación interna y usa
 2 componentes (Sección~\ref{sec:punto2}).
 Esta última elección constituye una variante respecto de la lectura literal
-del apartado 2.1, que pide reutilizar la dimensión óptima del apartado anterior.
-Su justificación experimental no sustituye la validación de ese alcance con
-el docente.
+del apartado 2.1, que pide reutilizar la dimensión óptima del apartado anterior;
+por eso la Sección~\ref{sec:auditoria-detector} también informa el detector
+con $D=384$.
 
-\subsection{Auditoría de la cuadrícula de entrenamiento}
+\subsection{Cuadrícula ampliada de entrenamiento}
 Con las mismas 30 particiones se amplió la cuadrícula a 9 tasas (se agrega
 100) y 6 checkpoints (se agrega 8000). Cada corrida seleccionó por F1 y
 pérdida en su propia validación interna, y volvió a entrenar con todo su
 entrenamiento. La cuadrícula ampliada obtuvo tasa de aciertos
 $0.9904\pm0.0018$ y F1 $0.9636\pm0.0068$, frente a
-$0.9906\pm0.0016$ y $0.9641\pm0.0063$ de la vigente. La diferencia
+$0.9906\pm0.0016$ y $0.9641\pm0.0063$ de la original. La diferencia
 pareada de F1 fue $-0.0005\pm0.0023$: mejoró en 2 corridas, empató en
 22 y empeoró en 6. Aumentar la búsqueda mejoró el F1 medio de validación
 (0.9680 frente a 0.9673), pero no el de prueba. Se conserva la cuadrícula
-vigente; alcanzar sus bordes no bastaba para concluir que ampliarla mejoraría
+original; alcanzar sus bordes no bastaba para concluir que ampliarla mejoraría
 la clasificación.
 
 En estas particiones, entre 145 y 181 mensajes de prueba por corrida tienen
 un texto idéntico en entrenamiento: media 162.2 de 1672 (9.70~\%). Sobre
-los textos de prueba ausentes del entrenamiento, la regresión vigente obtiene
+los textos de prueba ausentes del entrenamiento, la regresión con la cuadrícula original obtiene
 F1 $0.9565\pm0.0076$. Este diagnóstico describe otro subconjunto, con
 composición y dificultad propias; su diferencia con el F1 completo no mide
-por sí sola el sesgo por duplicados. Para evaluarlo haría falta acordar una
+por sí sola el sesgo por duplicados. Para evaluarlo haría falta una
 partición agrupada por texto. El archivo original se conserva íntegro.

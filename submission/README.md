@@ -1,26 +1,17 @@
 # Entrega
 
-**Estado del PDF versionado:** preliminar de la auditoría de los puntos 1
-y 2. Falta el punto 3, la comparación global y las conclusiones finales;
-este archivo todavía no es la entrega final.
+Entregado el 26/10/2026 por TEC Digital. Esta carpeta se arma con
+`./build_submission.sh` desde la raíz del proyecto; el `.zip` se crea
+comprimiendo su contenido (sin este README):
 
-Esta carpeta se reserva para las copias finales y verificadas de los archivos
-solicitados por TEC Digital. No trabajar directamente sobre esas copias.
+- `tp2_detector_spam.pdf`: informe compilado (35 páginas).
+- `informe/`: fuentes LaTeX (`main.tex`, `sections/`, `references.bib`) y las
+  figuras que usa en `figuras/`. Compila sin el resto del proyecto con
+  `latexmk -pdf main.tex`.
+- `notebooks/tp2_detector_spam.ipynb`: toda la implementación, sin salidas.
+- `tests/`: 74 pruebas unitarias que cargan las definiciones del notebook;
+  desde esta carpeta, `python -m pytest tests`.
 
-El enunciado pide un archivo `.zip` con el código fuente LaTeX, el PDF y el
-notebook. Toda la implementación está en el notebook; el `.zip` debe incluir
-(ver también la checklist de `TODO.md`):
-
-- `notebooks/tp2_detector_spam.ipynb`, ejecutado de principio a fin.
-- `tests/`, con las pruebas que cargan las definiciones del notebook.
-- `data/raw/SMSSpamCollection`, el dataset original de UCI sin editar, y su
-  fuente y licencia en `data/README.md`.
-- `requirements.txt`.
-- `docs/report/` (fuentes LaTeX) y `results/figures/`, que el informe usa.
-- `tp2_detector_spam.pdf`, generado con `./build_pdf.sh`.
-
-## Doxygen
-
-La documentación interna de Doxygen se copia en la carpeta `doxygen`. Dentro
-del folder `html` existe un archivo principal, `index.html`, que se usa para
-navegar a través de la documentación interna.
+Solo el PDF y este README se versionan; `informe/`, `notebooks/` y `tests/`
+son copias generadas. El `.zip` entregado tiene SHA-256
+`11a520305d942c453f860b3387dcfe8de646ddd8e73a816c9c41a2633997a936`.

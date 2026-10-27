@@ -20,15 +20,17 @@ IA).**
 
 ## Entregables
 
-- Notebook principal: `notebooks/tp2_detector_spam.ipynb`, con toda la
-  implementación y sus explicaciones; `tests/` conserva las pruebas externas.
-- Informe externo escrito en LaTeX: `docs/report/`.
-- PDF final del informe, generado desde LaTeX.
-- Documentación interna con formato Doxygen, generada desde una exportación
-  temporal del notebook y las pruebas.
+La entrega se realizó el 26/10/2026 con un `.zip` que contiene:
 
-La fecha de entrega es el martes 20 de octubre de 2026; la lista completa está
-en [TODO.md](TODO.md#checklist-de-entrega).
+- `tp2_detector_spam.pdf`, el informe compilado.
+- `informe/`, las fuentes LaTeX del informe con las figuras que usa.
+- `notebooks/tp2_detector_spam.ipynb`, con toda la implementación (sin salidas).
+- `tests/`, las 74 pruebas unitarias que cargan las definiciones del notebook.
+
+`./build_submission.sh` recompila el informe y vuelve a armar esas carpetas en
+`submission/`; el `.zip` se crea comprimiendo su contenido. La documentación
+Doxygen no se generó para la entrega. El detalle del cierre está en
+[TODO.md](TODO.md#estado-actual).
 
 ## Estructura
 
@@ -46,7 +48,7 @@ AI-TP2/
 ├── results/
 │   ├── figures/                PNG exportados por el notebook
 │   └── tables/                 CSV exportados por el notebook
-├── submission/                 copias finales para la entrega
+├── submission/                 PDF entregado y copias generadas por build_submission.sh
 └── tests/                      pruebas y carga de definiciones del notebook
 ```
 
@@ -292,6 +294,18 @@ El script descarta los archivos intermedios y deja únicamente el PDF generado
 en `submission/tp2_detector_spam.pdf`. (En el TP1 el script creaba
 `submissions/` pero copiaba a `submission/`; aquí ambas rutas coinciden).
 
+Para armar la entrega completa:
+
+```bash
+./build_submission.sh
+```
+
+Además del PDF, copia en `submission/` las fuentes LaTeX (`informe/`, con
+`figuras/` y una ruta de figuras que compila sin el resto del proyecto), el
+notebook y las pruebas. Omite `tests/test_partial_runner.py`, que verifica el
+ejecutor auxiliar `scripts/run_puntos_1_2.py`, ajeno a la entrega. Esas
+copias se regeneran y no se versionan.
+
 ## Revisión interna del proyecto
 
 `docs/report/review.tex` es un documento aparte, que no se entrega, para
@@ -314,11 +328,12 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 77 superadas, ninguna pendiente y ninguna fallida,
-tanto fuera del notebook como en su celda de pruebas del kernel WSL.
+Las pruebas del proyecto dan 77 superadas, ninguna pendiente y ninguna
+fallida; las 74 entregadas en `submission/tests/` pasan también desde una
+copia aislada de la entrega.
 La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
 logit cero y distinguió la variante D=2 del detector de la D=384 solicitada
-por la lectura literal de 2.1. Esa interpretación debe validarse con el docente.
+por la lectura literal de 2.1; el informe entregado presenta ambos casos.
 
 ## Equipo
 

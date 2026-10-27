@@ -32,7 +32,8 @@ línea base LLM. Tras cerrar 3.1, la persona autoriza respaldar sus cambios
 en main y completar 3.2. Mistral 7B NF4 obtiene F1 0.5518 y Qwen 14B
 NF4, 0.7126 en las mismas muestras. En 3.3, una época de LoRA sobre Qwen 14B
 NF4 sube el F1 de 0.7120 a 0.9708 en una prueba reservada fija (un solo
-entrenamiento), sobre todo al eliminar falsas alarmas.
+entrenamiento), sobre todo al eliminar falsas alarmas. El trabajo se
+entregó el 26/10/2026 con informe, fuentes LaTeX, notebook y pruebas.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -722,20 +723,50 @@ falso y la celda de ajuste reutiliza el adaptador guardado si faltan
 respuestas. Las celdas cambiadas y las pruebas nuevas se sincronizaron con
 WSL, con respaldo previo de sus archivos, y su celda de pruebas dio 77/0/0.
 
+\section{Entrega y cierre (26/10/2026)}
+Se sincronizó la rama principal local con origin/main (\texttt{a9654d6})
+y se preparó la entrega. Decisiones y cambios:
+\begin{itemize}
+\item \textbf{Contenido.} El enunciado pide fuentes LaTeX, PDF y notebook.
+Como las pruebas unitarias se califican y la celda de pruebas del notebook
+las importa, se agregó \texttt{tests/} junto al notebook (elección de la
+persona). El notebook se entregó sin salidas, también por elección de la
+persona: la ejecución completa no se realizó antes del plazo.
+\item \textbf{Informe.} Se retiraron menciones a Git, ramas, commits, rutas
+internas, transferencias entre máquinas y validaciones pendientes con el
+docente; las decisiones se redactan en impersonal (``se eligió'', ``se
+usó''). Se escribieron la comparación global y las conclusiones con
+limitaciones, solo con cifras ya presentes. Se agregaron etiquetas y
+referencias para las figuras que no se citaban y \texttt{multirow}.
+\item \textbf{Notebook y pruebas.} La raíz del notebook se busca por
+\texttt{tests/notebook\_loader.py}, con el directorio actual como respaldo,
+para que funcione fuera del proyecto. Las tres pruebas del ejecutor auxiliar
+pasaron a \texttt{tests/test\_partial\_runner.py}, que no se entrega;
+\texttt{pytest.ini} limita la colección a \texttt{tests/}.
+\item \textbf{Armado.} \texttt{build\_submission.sh} compila el PDF y copia
+fuentes LaTeX, las 25 figuras usadas, notebook y pruebas a
+\texttt{submission/}. La ruta de figuras admite \texttt{figuras/} y
+\texttt{results/figures/}. Las copias generadas y el \texttt{.zip} no se
+versionan.
+\item \textbf{Verificación.} Desde una copia aislada, \texttt{informe/}
+compila 35 páginas sin citas ni referencias indefinidas ni cajas
+desbordadas, y su texto coincide con el PDF del proyecto; \texttt{tests/}
+da 74/0/0. Se revisaron el índice de figuras y las secciones nuevas. El
+\texttt{.zip} entregado tiene SHA-256
+\texttt{11a52030\ldots 33997a936}; el PDF, \texttt{c07730b4\ldots ebedac}.
+\end{itemize}
+
 \section{Puntos pendientes}
-El punto 2 está implementado; su conformidad literal requiere resolver la
-variante de dimensión. Lo que falta, en orden (detalle en \texttt{TODO.md}):
+El trabajo está entregado. Quedan como mejoras opcionales (detalle en
+\texttt{TODO.md}):
 \begin{enumerate}
-\item Validar con el docente si acepta $D=2$ como variante del apartado 2.1.
-La referencia con $D=384$ ya tiene 30 corridas; la persona
-confirmó mantener la configuración vigente y no adoptar las alternativas.
-\item Avisar al equipo que el detector vigente usa 2 componentes y la
-regresión 384; las constantes no se cambiaron durante la auditoría.
-\item Puntos 3.1, 3.2 y 3.3 completos y publicados en origin/main; el
-cierre de 3.3 se publicó por solicitud expresa de la persona.
-\item Completar la comparación de métodos y las conclusiones del informe.
-\item Confirmar integrantes y fecha de entrega; después, ejecución final
-completa, Doxygen, PDF final y \texttt{.zip}.
+\item Ejecutar el notebook completo con salidas en una máquina con las
+cachés; no descarga ni reentrena modelos, pero repite las corridas de 1 y 2.
+\item Retirar del notebook la redacción de proceso interno, con el mismo
+criterio que el informe.
+\item Generar Doxygen.
+\item Conocer la opinión del docente sobre $D=2$ frente a $D=384$ en 2.1;
+el informe presenta ambos casos.
 \end{enumerate}
 
 \section{Continuación en main y kernel GPU remoto (26/10/2026)}
@@ -873,6 +904,12 @@ ajustar parámetros con la prueba; \texttt{RUN\_LORA\_TRAINING} desactivado
 y reutilización del adaptador guardado.\\
 26/10/2026 & Publicar el cierre verificado de 3.3 en origin/main. &
 Solicitud expresa de la persona: commit y push, como en 3.2.\\
+26/10/2026 & Entregar PDF, fuentes LaTeX, notebook sin salidas y
+\texttt{tests/}. & Elección de la persona: las pruebas se califican y el
+notebook las importa; la ejecución completa no cabía antes del plazo.\\
+26/10/2026 & Informe impersonal y sin referencias al repositorio; completar
+comparación y conclusiones. & Solicitud de la persona: el informe describe
+solo lo entregado; la plataforma de sincronización no forma parte de él.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -881,8 +918,9 @@ Solicitud expresa de la persona: commit y push, como en 3.2.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} (26/10/2026, con 3.1 a 3.3): 77
-superadas, 0 pendientes y 0 fallidas, también en la celda WSL.
+\item \texttt{pytest} (26/10/2026, entrega): 77 superadas, 0 pendientes y
+0 fallidas en el proyecto; 74/0/0 en la copia aislada de la entrega. Con 3.3,
+la celda WSL dio 77/0/0.
 Al cerrar 3.2 eran 64/0/0; al cerrar 3.1, 58/0/0; antes del punto 3.1, 48/1/0. La
 prueba de la derivada reprodujo el fallo antes de la corrección y pasa
 después. Las pruebas usan el backend \texttt{Agg} de Matplotlib.
@@ -906,11 +944,12 @@ de esta ejecución sin atribuirlos a cambios de modelo.
 de auditoría. Sus diagramas de caja usan dos líneas y medianas neutras;
 main conserva sus PNG previos. No se editaron figuras ni tablas
 experimentales a mano.
-\item Revisión e informe preliminar compilados mediante los dos comandos
+\item Revisión e informe final compilados mediante los dos comandos
 \texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
 de las páginas renderizadas.
-Los puntos 3.1, 3.2 y 3.3 se ejecutaron y documentaron; la comparación
-global y las conclusiones finales permanecen pendientes.
+Los puntos 3.1, 3.2 y 3.3 se ejecutaron y documentaron, junto con la
+comparación global y las conclusiones. La ejecución completa del notebook
+con salidas no se realizó antes de la entrega.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 

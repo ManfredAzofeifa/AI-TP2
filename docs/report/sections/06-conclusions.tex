@@ -1,9 +1,57 @@
 \section{Conclusiones}
 \label{sec:conclusiones}
 
-TODO: conclusiones del trabajo.
+\begin{itemize}
+    \item La regresión logística implementada en PyTorch, con evaluación,
+    gradiente y entrenamiento propios, separa sin error los datos
+    sintéticos y alcanza sobre las características de MPNet una tasa de
+    aciertos de $0.9906\pm0.0016$ y un F1 de $0.9641\pm0.0063$ en 30
+    particiones. Es el método más sólido evaluado con 30 corridas.
+    \item Reducir las 768 características a 384 componentes principales
+    conserva el 96.16~\% de la varianza y prácticamente el mismo F1
+    ($-0.0004$ en promedio). Con 2 componentes se pierde información útil
+    para separar las clases y el F1 baja a 0.7845.
+    \item El detector de anomalías por histogramas funciona sin ejemplos de
+    spam, pero queda por debajo de la regresión en las 30 particiones (F1
+    $0.7043\pm0.0247$ con $D=2$). Su punto débil son los ham poco
+    frecuentes que marca como spam. Además, la suma de verosimilitudes de
+    muchas componentes favorece al spam: con $D=384$ el detector casi no lo
+    encuentra.
+    \item Los modelos de lenguaje sin ajuste reconocen casi todo el spam,
+    pero producen muchas falsas alarmas; el mayor modelo evaluado, Qwen 14B
+    en NF4, obtiene el mejor F1 de los tres (0.7126).
+    \item Un ajuste eficiente con LoRA sobre Qwen 14B en NF4 corrige ese
+    sesgo: en su prueba reservada, los falsos positivos bajan de 174 a 5 y
+    el F1 sube de 0.7120 a 0.9708, también en las filas cuyo texto no
+    aparece en el entrenamiento.
+    \item La tasa de aciertos sola es engañosa en este dataset desbalanceado:
+    predecir siempre ham ya da 0.866. El F1 de la clase spam distingue
+    mejor los métodos y refleja el costo de las falsas alarmas.
+\end{itemize}
 
 \subsection{Limitaciones}
 \label{sec:limitaciones}
 
-TODO: limitaciones del protocolo y de los modelos.
+\begin{itemize}
+    \item Las 30 particiones y las 30 muestras se toman del mismo dataset y
+    se solapan; sus desviaciones describen la variación entre particiones,
+    no intervalos de confianza de experimentos independientes.
+    \item La partición es por filas y conserva los textos repetidos del
+    archivo original. En promedio, el 9.7~\% de los mensajes de prueba
+    (entre 145 y 181 de 1672) tiene una copia en el entrenamiento, lo que
+    puede sobreestimar el desempeño en mensajes nuevos.
+    \item El detector usa $D=2$, elegida con validación interna, en lugar
+    de reutilizar $D=384$ como pide la lectura literal del apartado 2.1.
+    Ambos casos se informan, y la elección de $D$ usó etiquetas de spam de
+    validación, por lo que el procedimiento completo no es enteramente no
+    supervisado.
+    \item Los modelos de lenguaje sin ajuste y el modelo ajustado se evalúan
+    con protocolos distintos de los puntos 1 y 2. El ajuste con LoRA es un
+    único entrenamiento en una partición, sin estimación de su variabilidad.
+    \item No se comprobó si los corpus de preentrenamiento de los modelos de
+    lenguaje incluyen esta colección pública, así que no puede descartarse
+    exposición previa a los mensajes.
+    \item Las comparaciones entre modelos de lenguaje cambian a la vez
+    familia, tamaño y precisión de los pesos; no aíslan el efecto de cada
+    factor.
+\end{itemize}

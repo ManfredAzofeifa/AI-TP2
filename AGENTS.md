@@ -26,8 +26,9 @@ verificación pendiente de `TODO.md`.
   en el dataset SMSSpamCollection (UCI) con (1) regresión logística propia en
   PyTorch, con y sin PCA; (2) detección de anomalías con densidades por
   histograma y un umbral de verosimilitud; y (3) modelos grandes de lenguaje.
-- Entrega: martes 20 de octubre de 2026. Entregable: `.zip` con fuentes
-  LaTeX, PDF y el notebook documentado, más `tests/` para verificación externa.
+- Entrega realizada el 26/10/2026 (el enunciado fijaba el 20/10/2026):
+  `.zip` con PDF, fuentes LaTeX (`informe/`), notebook y `tests/`, armado con
+  `./build_submission.sh`. El proyecto está cerrado; ver el estado actual.
 - Enunciado: `docs/assignment/TrabajoPractico2_detector_ataques_supervisado_no_supervisado.pdf`
   (se puede leer con `pdftotext -layout`).
 
@@ -36,11 +37,24 @@ verificación pendiente de `TODO.md`.
 | `notebooks/tp2_detector_spam.ipynb` | Única implementación: utilidades, puntos 1 a 3, experimentos y análisis |
 | `tests/test_puntoN.py`, `tests/test_utils.py` | Pruebas que cargan las definiciones del notebook con `tests/notebook_loader.py` |
 | `tests/test_notebook_structure.py` | Validez del notebook autocontenido y dependencias opcionales locales |
+| `tests/test_partial_runner.py` | Ejecutor auxiliar `scripts/run_puntos_1_2.py`; no se entrega |
+| `build_submission.sh`, `submission/` | Arma la entrega: PDF versionado y copias generadas (`informe/`, `notebooks/`, `tests/`) sin versionar |
 | `docs/report/sections/` | Informe LaTeX, una sección por punto |
 | `docs/report/review.tex`, `docs/report/review.pdf` | Revisión interna (no se entrega): lógica, pasos, resultados y registro de decisiones; el PDF se compila con `./build_pdf.sh review` y se versiona |
 
 ## Estado actual
 
+- **Entrega y cierre (26/10/2026):** `.zip` entregado (SHA-256
+  `11a520305d942c453f860b3387dcfe8de646ddd8e73a816c9c41a2633997a936`), con
+  PDF de 35 páginas, fuentes LaTeX y sus 25 figuras, notebook sin salidas y
+  74 pruebas. El informe usa redacción impersonal ("se eligió", "se usó"),
+  sin mencionar Git, ramas, rutas del repositorio, WSL como transferencia ni
+  decisiones "del equipo" o "de la persona"; incluye comparación global y
+  conclusiones. Compilar `informe/` y ejecutar `tests/` desde una copia
+  aislada: sin referencias indefinidas y 74/0/0. El proyecto da 77/0/0.
+  El notebook toma como raíz la carpeta con `tests/notebook_loader.py` o, sin
+  ella, el directorio actual. No se hicieron: ejecución completa con salidas,
+  Doxygen ni limpieza de la redacción interna del notebook.
 - **Estructura (24/10/2026):** implementación autocontenida en el único notebook;
   se retira la distribución en archivos por punto y `utils.py`.
 - **1.1 y 1.2:** regresión logística propia: score lineal básico con sesgo
@@ -83,10 +97,9 @@ verificación pendiente de `TODO.md`.
   0.5452 ± 0.0090. Sin respuestas ambiguas; 1168 falsos positivos y 30 falsos
   negativos en todo el dataset. Figuras, CSV y análisis de 3.1 completados.
   La nueva ejecución reproduce exactamente la caché anterior y libera el modelo.
-- **Pendiente:** comparación/conclusiones globales y cierre. 3.1, 3.2
-  (`88b6ee9`) y 3.3 están en `origin/main`; la persona autorizó el 26/10/2026
-  el commit y push del cierre verificado de 3.3. Esa autorización no cubre
-  publicaciones posteriores.
+- **Pendiente:** nada obligatorio. 3.1, 3.2 y 3.3 están en `origin/main`
+  (`a9654d6`); el cierre de entrega requiere nueva autorización para commit
+  y push. Las autorizaciones anteriores no cubren publicaciones posteriores.
 - **Pruebas verificadas (26/10/2026):** 77 superadas, 0 pendientes, 0 fallidas,
   en Mac y en la celda WSL (64/0/0 al cerrar 3.2; 48/1/0 antes de 3.1). `tests/conftest.py` fija el backend `Agg`.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
@@ -195,36 +208,18 @@ verificación pendiente de `TODO.md`.
 
 ## Próximos pasos
 
-Lista completa y notas de ejecución en
-[TODO.md](TODO.md#próximos-pasos-24102026). Resumen para agentes:
+El trabajo está entregado. Mejoras opcionales, detalladas en
+[TODO.md](TODO.md#próximos-pasos-24102026):
 
-1. Resolver con el docente el alcance de 2.1 frente al enunciado.
-   La persona confirmó el 25/10/2026 conservar la configuración vigente;
-   las alternativas permanecen documentadas sin adoptarse. La referencia
-   D=384 ya tiene 30
-   corridas (F1 0.0386). El detector calibrado mejora F1 a 0.7173, pero
-   deja escapar más spam. La regresión ampliada no mejora. Mantener las
-   constantes vigentes mientras no se acuerde otra configuración.
-   La celda opcional de auditoría queda desactivada; activarla repite corridas
-   largas. La configuración limpia también sus tablas. La autorización
-   recibida cubre esta auditoría con caché local, sin descargar modelos.
-   Después del punto 3, ejecutar todo el notebook para la entrega.
-2. Recordar a la persona que avise al equipo: el detector usa
-   `ANOMALY_PCA_DIMENSIONS = 2`; la regresión, `OPTIMAL_PCA_DIMENSIONS = 384`.
-3. Punto 3: 3.1 ya tiene modelo, prompt y regla de ambigüedad confirmados.
-   Su línea base, caché, figuras y análisis están completos; reutilizar la
-   caché para evaluar sin volver a cargar el modelo.
-   3.2 también está completo: reutilizar las tres cachés y las revisiones
-   registradas arriba. El piloto 3.3 está completo: Qwen 14B con LoRA
-   sobre NF4 y una sola partición; reutilizar su caché sin repetir el ajuste.
-   El kernel remoto ya está conectado: no exigir SSH, dominio ni cuenta
-   Cloudflare para continuar. Comprobar host y CUDA desde ese kernel antes
-   de experimentar; los comandos de terminal del Mac siguen siendo locales.
-   No reiniciar ni matar la sesión remota existente para cambiar de rama.
-4. Informe: `05-comparison.tex`, `06-conclusions.tex` y resumen final del
-   notebook, después del punto 3.
-5. Confirmar integrantes y fecha de entrega (el enunciado dice 20/10/2026 y
-   el registro es del 24/10/2026); después, Doxygen, PDF final y `.zip`.
+1. Ejecución completa con salidas en una máquina con las cachés de
+   `data/processed/`; no descarga ni reentrena modelos, pero repite las
+   corridas de 1 y 2 y regenera `results/`. Pedir confirmación antes.
+2. Retirar del notebook la redacción de proceso interno (equipo, repositorio,
+   WSL/PyCharm), con el mismo criterio que el informe.
+3. Doxygen. 4. Opinión del docente sobre D=2 frente a D=384 en 2.1.
+
+No reiniciar ni matar la sesión remota existente; las cachés de WSL son las
+únicas con adaptadores y checkpoints de 3.3.
 
 ## Antes de modificar
 
@@ -320,6 +315,11 @@ Lista completa y notas de ejecución en
 
 ### Documentación, pruebas y datos
 
+- El informe entregado (`docs/report/main.tex` y `sections/`) describe solo lo
+  que contiene la entrega: redacción impersonal en español ("se decidió",
+  "se incorporó"), sin "el equipo" ni "la persona", y sin Git, ramas,
+  commits, rutas internas del repositorio ni procesos de sincronización.
+  Esas notas van en `review.tex`, `TODO.md` y este archivo.
 - Toda función nueva lleva documentación Doxygen (`"""!` con `@brief`,
   `@param` y `@return`), en español, con el estilo de los archivos existentes.
 - Implementar las pruebas pendientes en lugar de borrarlas. El enunciado exige
@@ -395,11 +395,13 @@ git grep -n "TODO(punto 1"
 python3 -m jupyter nbconvert --to notebook --execute notebooks/tp2_detector_spam.ipynb --output-dir build/notebook-run
 ./build_pdf.sh review
 ./build_pdf.sh
+./build_submission.sh
 ```
 
 `./build_pdf.sh review` compila `docs/report/review.tex` en
 `docs/report/review.pdf`; `./build_pdf.sh` compila el informe en
-`submission/tp2_detector_spam.pdf`. Ambos necesitan LaTeX con `latexmk`: en
+`submission/tp2_detector_spam.pdf`; `./build_submission.sh` además copia
+fuentes LaTeX, figuras usadas, notebook y pruebas a `submission/`. Ambos necesitan LaTeX con `latexmk`: en
 Windows, MiKTeX (`winget install MiKTeX.MiKTeX`), con la instalación
 automática de paquetes activada, y `latexmk` usa el Perl de Git Bash. Usar
 siempre `build_pdf.sh` y no `latexmk` a mano: desde Git Bash, MiKTeX no

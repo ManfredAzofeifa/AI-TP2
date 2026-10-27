@@ -1,7 +1,7 @@
 \section{Clasificación supervisada: modelos grandes de lenguaje}
 \label{sec:punto3}
 
-% Punto 3 (10 puntos y 20 extra). Implementación: notebooks/tp2_detector_spam.ipynb. Pruebas: tests/test_punto3.py.
+% Punto 3 (10 puntos y 20 extra). Implementación en el notebook; pruebas en tests/test_punto3*.py.
 
 \subsection{Clasificación sin ajuste}
 
@@ -44,13 +44,12 @@ tokenizador como para los pesos. La clasificación de los 5574 mensajes tardó
 84.2 segundos en una NVIDIA GeForce RTX 3080 Ti de 12 GiB, bajo WSL2,
 PyTorch \texttt{2.14.0+cu130}, precisión \texttt{bfloat16} y lotes de 16.
 Este tiempo corresponde a la generación; excluye descarga y carga del modelo.
-Los pesos ya estaban en caché. La generación se repitió con HF autenticado y
-reprodujo exactamente las respuestas de la caché anterior. El token no forma
-parte del notebook ni de los resultados. Después se liberó el modelo de la GPU.
+Una segunda generación reprodujo exactamente las mismas respuestas.
+Después se liberó el modelo de la GPU.
 
 \paragraph{Resultados.} En las 30 muestras, la tasa de aciertos fue
 $0.7853\pm0.0073$ y el F1-score $0.5452\pm0.0090$ (media y desviación
-estándar muestral). No hubo respuestas ambiguas. La tabla conserva los
+estándar muestral; Figura~\ref{fig:qwen3b-metricas}). No hubo respuestas ambiguas. La tabla conserva los
 resultados anteriores como referencia descriptiva: los protocolos de muestreo
 son diferentes, por lo que no es una comparación pareada sobre las mismas filas.
 
@@ -74,6 +73,7 @@ Qwen2.5-3B-Instruct & $0.7853\pm0.0073$ & $0.5452\pm0.0090$\\
 \includegraphics[width=\linewidth]{qwen2-5-3b-instruct-metricas-en-30-muestras-del-30.png}
 \caption{Variación entre muestras de las predicciones fijas de Qwen; no
 representa variación entre entrenamientos del modelo.}
+\label{fig:qwen3b-metricas}
 \end{figure}
 
 \paragraph{Errores y alcance.} Sobre todo el dataset, Qwen detectó 717 de
@@ -83,17 +83,19 @@ cuales solo 717 eran correctos. En las muestras hubo, en promedio, 349.9
 falsos positivos y 9.0 falsos negativos. El F1 bajo se explica principalmente
 por las falsas alarmas, no por respuestas ambiguas. Incluso la tasa de
 aciertos queda por debajo de predecir siempre ham (86.6\,\% en el dataset),
-aunque esa regla trivial tendría F1 cero para spam.
+aunque esa regla trivial tendría F1 cero para spam
+(Figura~\ref{fig:qwen3b-confusion}).
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.86\linewidth]{qwen2-5-3b-instruct-matriz-de-confusion-promedio.png}
 \caption{Confusión promedio de Qwen. La abundancia de ham marcado como spam
 limita la precisión a pesar de detectar la mayor parte del spam.}
+\label{fig:qwen3b-confusion}
 \end{figure}
 
 Este resultado corresponde al modelo, prompt sin ejemplos y decodificación
-confirmados. No se cambió el prompt después de observar las métricas.
+fijados de antemano. No se cambió el prompt después de observar las métricas.
 Tampoco permite concluir que cualquier LLM sea inferior: evalúa esta
 configuración concreta. El apartado siguiente conserva esta línea base y
 agrega los dos modelos elegidos para 3.2.
@@ -101,8 +103,8 @@ agrega los dos modelos elegidos para 3.2.
 \subsection{Modelos adicionales con cuantización NF4}
 \label{sec:punto32}
 
-\paragraph{Selección y protocolo.} Después de respaldar 3.1, el equipo
-confirmó Mistral-7B-Instruct-v0.3 \cite{mistral7b_v03} y
+\paragraph{Selección y protocolo.} Para 3.2 se eligieron
+Mistral-7B-Instruct-v0.3 \cite{mistral7b_v03} y
 Qwen2.5-14B-Instruct \cite{qwen25_14b}, con aproximadamente 7.25 y 14.77
 mil millones de parámetros. Ambos se cargan a 4 bits mediante NF4, con
 doble cuantización y cálculo bfloat16 \cite{hf_bitsandbytes}. Se cuantizan
@@ -136,6 +138,8 @@ excluyen descarga y carga; el pico de memoria se mide durante la generación.
 \paragraph{Resultados.} Se completaron 5574 respuestas por modelo y la
 evaluación de las mismas 30 muestras. La tabla informa media y desviación
 estándar muestral; las respuestas de Qwen 3B se reutilizan como referencia.
+Las Figuras~\ref{fig:llm-f1} y~\ref{fig:llm-acc} muestran la distribución
+de ambas métricas.
 
 \begin{table}[H]
 \centering
@@ -156,6 +160,7 @@ Qwen 14B, NF4 & $0.8954\pm0.0065$ & $0.7126\pm0.0139$\\
 \includegraphics[width=\linewidth]{modelos-de-lenguaje-comparacion-de-f1-score-en-30-muestras.png}
 \caption{F1 de las predicciones fijas de cada configuración. Las cajas
 resumen muestras solapadas, no entrenamientos independientes.}
+\label{fig:llm-f1}
 \end{figure}
 
 \paragraph{Errores e interpretación.} Qwen 14B mejora principalmente la
@@ -163,7 +168,7 @@ precisión de spam: reduce los falsos positivos de 1168 a 552 frente a Qwen
 3B y detecta 721 de los 747 spam (recobrado 96.5\,\%). Su precisión es
 56.6\,\%; las falsas alarmas siguen limitando el F1. Mistral queda cerca
 de la referencia. Sus doce respuestas ambiguas corresponden a ham y no
-añaden spam escapado al aplicar la regla acordada.
+añaden spam escapado al aplicar la regla de interpretación.
 
 \begin{table}[H]
 \centering
@@ -192,6 +197,7 @@ después de observar estos resultados.
 \includegraphics[width=\linewidth]{modelos-de-lenguaje-comparacion-de-tasa-de-aciertos-en-30-muestras.png}
 \caption{Tasa de aciertos bajo el mismo muestreo. Se informa junto con F1
 para reflejar el desbalance entre ham y spam.}
+\label{fig:llm-acc}
 \end{figure}
 
 \paragraph{Recursos observados.} Los pesos y buffers ocupan 3.75 GiB en
@@ -214,10 +220,10 @@ Qwen 14B & 4 & 536.8 & 9.774 & 9.984\\
 \end{table}
 
 Estos picos no incluyen la memoria de otros procesos ni del controlador.
-Se liberó cada modelo al terminar. Las respuestas se transfirieron con
-SHA-256 y las 30 filas por modelo se reprodujeron en CPU desde las cachés,
-con tolerancia $10^{-12}$ respecto de los CSV. Las figuras individuales,
-las comparativas y las tablas salen de las celdas del notebook.
+Se liberó cada modelo al terminar. Las métricas de las 30 muestras se
+recalcularon en CPU a partir de las respuestas guardadas, con diferencias
+menores que $10^{-12}$ respecto de las tablas exportadas. Las figuras
+individuales, las comparativas y las tablas salen de las celdas del notebook.
 
 \subsection{Ajuste fino eficiente}
 \label{sec:punto33}
@@ -227,9 +233,9 @@ Qwen2.5-14B-Instruct, uno de los dos modelos adicionales de 3.2, mediante
 LoRA \cite{hu2021lora} sobre su base NF4 congelada. Esta combinación sigue
 el enfoque de ajuste sobre pesos cuantizados de QLoRA
 \cite{dettmers2023qlora,peft_lora_training}; no se utiliza DoRA
-\cite{liu2024dora}. El equipo confirmó PEFT para los adaptadores y un
-bucle explícito de entrenamiento en PyTorch. El enunciado de 3.3 pide
-entrenar y analizar, sin fijar 30 entrenamientos; se acordó un único piloto.
+\cite{liu2024dora}. Se usa PEFT para los adaptadores y un bucle explícito
+de entrenamiento en PyTorch. El enunciado de 3.3 pide entrenar y analizar,
+sin fijar 30 entrenamientos; se realizó un único entrenamiento piloto.
 
 \paragraph{Adaptación de bajo rango.} Para cada matriz lineal congelada
 $W_0\in\mathbb{R}^{d_{\mathrm{out}}\times d_{\mathrm{in}}}$, se aprende
@@ -275,13 +281,13 @@ su valor y sus gradientes con el cálculo completo enmascarado. El padding
 se enmascara por posición, conservando el EOS real aunque comparta su
 identificador con el token de relleno.
 
-\paragraph{Optimización y memoria.} Se confirmó una época de AdamW con
+\paragraph{Optimización y memoria.} Se usa una época de AdamW con
 tasa constante $2\times10^{-4}$, decaimiento de pesos cero, recorte de norma
 de gradiente a 1, lote físico de un mensaje y acumulación de 16. El último
 grupo parcial se normaliza por su tamaño real. Se usa gradient
 checkpointing no reentrante para recalcular activaciones en backward y
 reducir memoria. Se guardan adaptadores y estados de progreso cada 50
-pasos, fuera de Git.
+pasos.
 
 La prueba de capacidad ejecutó forward, backward, acumulación y dos pasos
 de AdamW con el ejemplo de ajuste más largo (314 tokens), alcanzando
@@ -318,8 +324,8 @@ de la única época. La validación usa solo filas del entrenamiento externo.}
 224.2\,s con lote 4 (pico de 9.81\,GiB asignados) y produjo solo respuestas
 \texttt{ham} o \texttt{spam}, sin ambiguas. Después se liberó el modelo.
 La Tabla~\ref{tab:p33} compara la base de 3.2 y el modelo ajustado sobre las
-mismas filas. Las métricas se recalcularon en CPU desde las cachés
-transferidas con SHA-256 y coinciden con las tablas exportadas.
+mismas filas. Las métricas se recalcularon en CPU a partir de las respuestas
+guardadas y coinciden con las tablas exportadas.
 
 \begin{table}[H]
 \centering

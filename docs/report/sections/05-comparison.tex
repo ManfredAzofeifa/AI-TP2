@@ -1,5 +1,78 @@
 \section{Comparación de resultados}
 \label{sec:comparacion}
 
-TODO: comparar todos los métodos con la tabla y los diagramas de caja de la
-sección ``Comparación de resultados'' del notebook.
+La Tabla~\ref{tab:comparacion} reúne las métricas de todos los métodos.
+Los protocolos no son idénticos, así que la tabla se lee por bloques. La
+regresión logística y el detector de anomalías se evalúan en el 30~\% de
+prueba de las mismas 30 particiones (semillas 2026 a 2055). Los modelos de
+lenguaje sin ajuste no se entrenan con los mensajes y se evalúan en 30
+muestras estratificadas del 30~\% de todo el dataset, con las mismas
+semillas. El ajuste con LoRA se evalúa en una sola partición, cuya prueba
+de 1672 filas tiene la misma composición que las de los puntos 1 y 2. Por
+eso solo las filas de un mismo bloque admiten comparación pareada.
+
+\begin{table}[H]
+    \centering
+    \caption{Resumen de todos los métodos. Media $\pm$ desviación en 30
+    corridas, salvo el bloque de 3.3, que corresponde a un entrenamiento y
+    una partición.}
+    \label{tab:comparacion}
+    \small
+    \begin{tabular}{llcc}
+        \toprule
+        Bloque & Método & Tasa de aciertos & F1-score \\
+        \midrule
+        \multirow{4}{*}{Punto 1}
+            & Regresión, 768 dim. & $0.9906\pm0.0016$ & $0.9641\pm0.0063$ \\
+            & Regresión, PCA $k=384$ & $0.9905\pm0.0019$ & $0.9637\pm0.0075$ \\
+            & Regresión, PCA $k=192$ & $0.9894\pm0.0021$ & $0.9596\pm0.0082$ \\
+            & Regresión, PCA $k=2$ & $0.9466\pm0.0054$ & $0.7845\pm0.0189$ \\
+        \midrule
+        \multirow{2}{*}{Punto 2}
+            & Histogramas, $D=2$ & $0.9195\pm0.0084$ & $0.7043\pm0.0247$ \\
+            & Histogramas, $D=384$ & $0.7892\pm0.0119$ & $0.0386\pm0.0145$ \\
+        \midrule
+        \multirow{3}{*}{3.1 y 3.2}
+            & Qwen2.5-3B, BF16 & $0.7853\pm0.0073$ & $0.5452\pm0.0090$ \\
+            & Mistral 7B, NF4 & $0.7923\pm0.0084$ & $0.5518\pm0.0108$ \\
+            & Qwen2.5-14B, NF4 & $0.8954\pm0.0065$ & $0.7126\pm0.0139$ \\
+        \midrule
+        \multirow{2}{*}{3.3}
+            & Qwen2.5-14B, NF4 sin ajuste & 0.8935 & 0.7120 \\
+            & Qwen2.5-14B, NF4 con LoRA & 0.9922 & 0.9708 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Supervisión y representación.} Los métodos que aprenden con
+etiquetas de spam obtienen los mejores resultados: la regresión logística
+sobre MPNet (F1 0.9641) y Qwen 14B ajustado con LoRA (F1 0.9708 en su
+única prueba). Con un número de componentes suficiente, la regresión
+conserva casi todo su desempeño: con 384 componentes el F1 baja en
+promedio 0.0004. La caída fuerte aparece con 2 componentes, donde la
+regresión pierde 0.18 de F1 y deja escapar más de la cuarta parte del
+spam.
+
+\paragraph{Sin ejemplos de spam.} El detector de histogramas no usa spam
+para construir sus densidades y queda por debajo de la regresión en las 30
+particiones. Con la misma representación de 2 componentes, detecta casi la
+misma fracción de spam que la regresión (71.4~\% frente a 72.6~\%), pero
+marca más del doble de ham. Con $D=384$, el spam resulta más verosímil que
+el ham y el detector prácticamente no lo encuentra (F1 0.0386).
+
+\paragraph{Modelos de lenguaje sin ajuste.} Los tres modelos detectan entre
+el 95~\% y el 96.5~\% del spam del dataset, pero marcan como spam entre 552
+y 1168 de los 4827 ham. Esas falsas alarmas dejan su F1 entre 0.55 y 0.71 y
+su tasa de aciertos por debajo de la regresión. Qwen 14B NF4 es la mejor de
+las tres configuraciones; las demás quedan incluso por debajo de la tasa de
+aciertos de predecir siempre ham (0.866), aunque esa regla tendría F1 cero.
+
+\paragraph{Efecto del ajuste.} En la prueba fija de 3.3, el ajuste con LoRA
+reduce los falsos positivos de Qwen 14B de 174 a 5 y eleva el F1 de 0.7120
+a 0.9708, con 4 spam escapados más. Su F1 queda por encima de la media de la
+regresión logística, pero proviene de un solo entrenamiento y una
+partición: la diferencia con la regresión es descriptiva y no permite
+afirmar que un método supere al otro. El costo también difiere: el ajuste
+necesitó una GPU de 12~GiB y casi una hora de entrenamiento, mientras que
+la regresión trabaja sobre características de 768 dimensiones ya
+calculadas.

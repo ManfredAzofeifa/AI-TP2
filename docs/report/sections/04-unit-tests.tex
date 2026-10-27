@@ -2,34 +2,35 @@
 \label{sec:pruebas}
 
 El enunciado exige al menos dos pruebas unitarias para \texttt{forward} y
-dos para \texttt{train\_logistic\_regression}. Las pruebas están en
-\texttt{tests/test\_punto1.py} y se ejecutan en la sección ``Pruebas
-unitarias'' del notebook y con \texttt{pytest}. Cada prueba es una función
+dos para \texttt{train\_logistic\_regression}. Las pruebas se entregan en
+la carpeta \texttt{tests/}, junto al notebook, y se ejecutan con
+\texttt{pytest} o desde la sección ``Pruebas unitarias'' del notebook. Las
+del punto 1 están en \path{tests/test_punto1.py}. Cada prueba es una función
 documentada con Doxygen que falla mediante \texttt{assert} o
 \texttt{torch.testing.assert\_close} si el resultado no coincide con el
 esperado.
 
-La implementación que se prueba vive en el mismo notebook. El cargador
+La implementación que se prueba está en el mismo notebook. El cargador
 \path{tests/notebook_loader.py} ejecuta únicamente las celdas cuyo prefijo
 es \texttt{\# Definiciones:}; excluye la configuración, la descarga de
 modelos y las corridas experimentales. Así las pruebas verifican las
-funciones entregadas en el cuaderno sin mantener una copia separada en
-archivos por punto. Las pruebas de estructura comprueban que el notebook
-sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución local de \texttt{pytest} (26/10/2026) dio 77 pruebas
-superadas, ninguna pendiente y ninguna fallida.
+funciones del cuaderno sin mantener una copia separada de la
+implementación. Las pruebas de estructura comprueban que el notebook sea
+válido, que sus definiciones no se dupliquen y que no importen dependencias
+opcionales al cargarse; \path{tests/test_utils.py} cubre las utilidades
+comunes de datos, métricas y exportación. La carpeta contiene 74 pruebas:
+con el notebook entregado, \texttt{pytest} da 74 superadas, ninguna
+pendiente y ninguna fallida.
 
-El ejecutor del notebook usa pytest para resolver fixtures como
-\texttt{monkeypatch} y \texttt{tmp\_path}; llamar las pruebas sin argumentos
-producía fallos en las pruebas nuevas de 3.1. Una prueba de regresión verifica
-la ejecución con fixtures. La celda recarga el cargador y los módulos de
-pruebas para no usar definiciones antiguas en un kernel persistente.
-También se verifica que tokenizador y pesos compartan la misma revisión,
-aunque Transformers no conserve \texttt{config.\_commit\_hash}. Las dos
-verificaciones usan simulaciones o archivos temporales, sin descargar modelos.
-La celda del notebook ejecutada en WSL dio 64/0/0 al cerrar 3.2.
+El ejecutor de la celda de pruebas usa pytest para resolver fixtures como
+\texttt{monkeypatch} y \texttt{tmp\_path}, y recarga el cargador y los
+módulos de pruebas para no usar definiciones antiguas en un kernel
+persistente. También se verifica que tokenizador y pesos compartan la misma
+revisión, aunque Transformers no conserve \texttt{config.\_commit\_hash}.
+Estas verificaciones usan simulaciones o archivos temporales, sin descargar
+modelos.
 
-Las trece pruebas adicionales de \path{tests/test_punto3_finetuning.py}
+Las trece pruebas de \path{tests/test_punto3_finetuning.py}
 comprueban el objetivo causal enmascarado, la conservación de EOS real
 cuando comparte identificador con padding, el rechazo de etiquetas o
 longitudes incompatibles, la equivalencia de pérdida y gradientes con
@@ -37,9 +38,8 @@ el cálculo completo, la restauración después de la prueba de capacidad,
 la acumulación en el último grupo parcial, la separación de filas de
 ajuste/validación/prueba, la base BF16 congelada, el contrato de clasificación
 y el título exportable de la figura. También rechazan respuestas e
-historial procedentes de adaptadores distintos. Usan modelos diminutos o simulaciones,
-sin descargar pesos. La celda de pruebas del kernel WSL, con el notebook y
-las pruebas sincronizados, también dio 77/0/0 (26/10/2026).
+historial procedentes de adaptadores distintos. Usan modelos diminutos o
+simulaciones, sin descargar pesos.
 
 \subsection{Evaluación del modelo}
 
@@ -62,8 +62,8 @@ las pruebas sincronizados, también dio 77/0/0 (26/10/2026).
 Una tercera prueba de \texttt{forward},
 \texttt{test\_forward\_gradient\_at\_zero\_matches\_sigmoid\_derivative},
 comprueba $\partial p/\partial w=x/4$ y $\partial p/\partial b=1/4$ con
-logit cero. Reprodujo una derivada nula en la versión anterior y pasa con
-la selección explícita de la rama del exponente.
+logit cero. Falla si el exponente se calcula con \texttt{abs}, que da
+derivada nula en cero, y pasa con la selección explícita de la rama.
 
 \subsection{Entrenamiento}
 
@@ -169,14 +169,6 @@ tensores pequeños construidos a mano:
     formados o no finitos, cantidades de intervalos y cuantiles inválidos; las
     cuatro figuras devuelven su título como \texttt{suptitle}.
 \end{itemize}
-
-\subsection{Ejecución portátil de los puntos 1 y 2}
-Tres pruebas adicionales comprueban que el ejecutor compartido seleccione
-los puntos 1 y 2 y las pruebas sin modificar la configuración original,
-que valide la caché sin tocar resultados existentes y que ejecute una celda
-mínima en un kernel limpio del mismo intérprete invocante. No descargan
-modelos ni ejecutan experimentos largos. El procedimiento para otras
-computadoras se describe en \path{docs/reproducibility.md}.
 
 \subsection{Modelos de lenguaje (puntos 3.1 y 3.2)}
 Las quince pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan

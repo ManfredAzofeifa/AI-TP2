@@ -10,6 +10,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{caption}
@@ -19,7 +20,9 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage[margin=1in]{geometry}
 
-\graphicspath{{../../results/figures/}}
+% Las figuras están en figuras/ dentro de la entrega y en results/figures/ al compilar
+% desde el proyecto completo.
+\graphicspath{{figuras/}{../../results/figures/}}
 % Los nombres largos de funciones (\texttt{train\_logistic\_regression}) se pueden
 % cortar después de un guion bajo, y los espacios se estiran un poco antes que
 % dejar texto fuera del margen.
@@ -29,7 +32,7 @@
 
 \title{Trabajo práctico 2: Detección de spam con aprendizaje supervisado y no supervisado}
 \author{Alejandro Quesada \and Jose Herrera \and Manfred Azofeifa}
-\date{24 de octubre de 2026}
+\date{26 de octubre de 2026}
 
 \begin{document}
 
@@ -39,7 +42,7 @@
 \listoffigures
 \newpage
 
-% Una sección por punto del enunciado: cada responsable edita solo su archivo.
+% Una sección por punto del enunciado.
 \input{sections/00-introduction}
 \input{sections/01-punto1-regresion-logistica}
 \input{sections/02-punto2-deteccion-anomalias}
