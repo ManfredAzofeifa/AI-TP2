@@ -16,7 +16,7 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 58 pruebas
+dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 64 pruebas
 superadas, ninguna pendiente y ninguna fallida.
 
 El ejecutor del notebook usa pytest para resolver fixtures como
@@ -27,7 +27,7 @@ pruebas para no usar definiciones antiguas en un kernel persistente.
 También se verifica que tokenizador y pesos compartan la misma revisión,
 aunque Transformers no conserve \texttt{config.\_commit\_hash}. Las dos
 verificaciones usan simulaciones o archivos temporales, sin descargar modelos.
-La celda del notebook ejecutada en WSL también dio 58/0/0.
+La celda del notebook ejecutada en WSL también dio 64/0/0.
 
 \subsection{Evaluación del modelo}
 
@@ -166,8 +166,8 @@ mínima en un kernel limpio del mismo intérprete invocante. No descargan
 modelos ni ejecutan experimentos largos. El procedimiento para otras
 computadoras se describe en \path{docs/reproducibility.md}.
 
-\subsection{Modelos de lenguaje (punto 3.1)}
-Las nueve pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan
+\subsection{Modelos de lenguaje (puntos 3.1 y 3.2)}
+Las quince pruebas de \path{tests/test_punto3.py} no descargan ni ejecutan
 modelos: usan un tokenizador y un modelo simulados que imitan la interfaz de
 Hugging Face.
 
@@ -185,4 +185,11 @@ Hugging Face.
     \item \textbf{Caché y muestras.} La caché de respuestas se rechaza si
     cambian los textos o el prompt; cada corrida evalúa la muestra
     estratificada de su semilla e incluye la matriz de confusión.
+    \item \textbf{Cuantización NF4.} El cargador fija la revisión y el mapa
+    de GPU sin llamar después a \texttt{to} sobre pesos de precisión completa;
+    rechaza CPU y revisiones mutables antes de importar las dependencias.
+    \item \textbf{Identidad del perfil.} La caché NF4 cambia al modificar
+    revisión, lote o precisión de cálculo y no se confunde con la de
+    precisión completa. El perfil sin cuantización conserva exactamente
+    la identidad de la caché de 3.1.
 \end{itemize}

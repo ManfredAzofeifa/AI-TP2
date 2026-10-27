@@ -55,10 +55,34 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   ambiguas; 1168 ham marcados como spam y 30 spam escapados en todo el dataset.
   Las respuestas se guardan en `data/processed/llm/` y la evaluación (30
   muestras del 30 %) se ejecuta sin GPU a partir de esa caché.
-- **Pendiente:** 3.2 y 3.3 (extras), comparación/conclusiones globales y cierre.
-  Tras completar 3.1, la persona autoriza respaldarlo en `origin/main` y
-  continuar con 3.2; falta seleccionar los modelos adicionales.
-- **Pruebas verificadas (26/10/2026):** 58 superadas, 0 pendientes, 0 fallidas
+- **Pendiente:** 3.3 (extra), comparación/conclusiones globales y cierre.
+  3.1 está respaldado en `origin/main`; se autoriza publicar el estado
+  verificado de 3.2 en `origin/main` antes de iniciar 3.3. La persona pide
+  consultar las decisiones de fine-tuning y apegarse al enunciado y al curso.
+- **3.2 completo (26/10/2026):** respaldo de 3.1 publicado en `origin/main`
+  (`2534503`). La persona confirmó Mistral-7B-Instruct-v0.3 y
+  Qwen2.5-14B-Instruct, ambos NF4 con doble cuantización y cálculo bfloat16.
+  Descarga y evaluación secuenciales autorizadas en WSL; sin cambiar prompt,
+  decodificación ni muestras. Dependencias opcionales instaladas en WSL:
+  accelerate 1.15.0 y bitsandbytes 0.50.2. En 30 muestras: Mistral obtiene
+  accuracy 0.7923 ± 0.0084 y F1 0.5518 ± 0.0108; Qwen 14B, accuracy
+  0.8954 ± 0.0065 y F1 0.7126 ± 0.0139. Generación: 168.6/536.8 s con
+  lotes 16/4 y picos asignados 4.625/9.774 GiB. Los modelos se liberaron.
+  Mistral tiene 12 respuestas ambiguas, todas ham; Qwen 14B, ninguna.
+  Se transfirieron 22 artefactos con SHA-256 y las 30 filas por modelo
+  se reprodujeron en CPU (tolerancia 1e-12). Suite Mac y celda WSL:
+  64 superadas, 0 pendientes y 0 fallidas. Fuentes y alternativas en
+  `docs/research/punto3-2-modelos-cuantizados.md`.
+  Las 69 celdas guardadas coinciden en fuente entre Mac y WSL; se conserva
+  respaldo ejecutado y ambas copias de desarrollo quedan sin salidas.
+- **LAN verificada (26/10/2026):** reenvío de Windows al Jupyter existente
+  y firewall limitado al Mac; PyCharm conectado por IP local y ejecución
+  Linux/CUDA confirmada por MCP; túnel de Jupyter retirado. Guía y reversión:
+  `docs/jupyter-lan.md`.
+  El kernel anterior ya no existía; los tres pesos completos de Mistral se
+  recuperaron desde archivos protegidos y verificados por SHA-256. La carga
+  NF4 y la prueba rápida funcionan con progreso de Hugging Face desactivado.
+- **Pruebas verificadas (26/10/2026):** 64 superadas, 0 pendientes, 0 fallidas
   (antes del punto 3.1: 48/1/0). `tests/conftest.py` usa el backend `Agg`.
   La ejecución original de las 120 corridas UCI no dependió de 1.3.
   La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
@@ -125,8 +149,8 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
 3. **Punto 3 (10 puntos + 20 extra).** 3.1 completo en la GPU WSL:
    respuestas en caché local, 30 muestras, figuras y análisis verificados.
    Reutilizar la caché para evaluar sin cargar el modelo. La persona
-   solicita respaldar primero 3.1 en `origin/main` y continuar con 3.2.
-   Primero decidir los modelos adicionales; LoRA/DoRA (3.3) sigue pendiente (ver
+   respaldó primero 3.1 en `origin/main` y confirmó Mistral 7B y Qwen 14B
+   en NF4 para 3.2. LoRA/DoRA (3.3) sigue pendiente (ver
    [Decisiones pendientes](#decisiones-pendientes-del-equipo)).
 4. **Informe:** completar `05-comparison.tex` (todos los métodos) y
    `06-conclusions.tex`, y el resumen de conclusiones al final del notebook.
@@ -276,9 +300,10 @@ sección "Objetivo y protocolo" del notebook y en el informe.
 - [x] 3.1 (26/10/2026): `LLM_MODELS = ["Qwen/Qwen2.5-3B-Instruct"]`, prompt
       sin ejemplos en inglés (`DEFAULT_PROMPT`), decodificación voraz y
       respuestas ambiguas como ham. Ejecución en GPU CUDA de WSL.
-- [ ] `LLM_MODELS` de 3.2 (extra, al menos dos más), el
-      prompt y qué hacer con respuestas ambiguas. Son 5 574 mensajes por
-      modelo; preferir modelos que corran en las computadoras del equipo.
+- [x] Modelos de 3.2: `mistralai/Mistral-7B-Instruct-v0.3` y
+      `Qwen/Qwen2.5-14B-Instruct`, ambos NF4 de 4 bits con doble cuantización;
+      conservar el prompt y la regla de ambigüedad de 3.1. Descargar y evaluar
+      en WSL de forma secuencial, con revisiones fijadas y lotes pequeños.
 - [ ] `LORA_MODEL` y LoRA o DoRA (3.3, extra).
 
 ## Punto 1 - sección 1 del notebook (60 puntos)
@@ -365,11 +390,12 @@ nueve veces las inferencias de reclasificar las 30 muestras del 30 %.
         Cambiar de modelo = cambiar `LLM_MODEL_NAME` y repetir las cinco primeras.
   - [x] Ejecutar en la GPU WSL autorizada, conservar la caché y escribir el análisis
         en el notebook y en `03-punto3-modelos-lenguaje.tex` con números reales.
-- [ ] **3.2 (10 extra)** al menos dos modelos más en `LLM_MODELS`.
+- [x] **3.2 (10 extra)** Mistral 7B y Qwen 14B en NF4: ejecución completa,
+      mismas 30 muestras, comparación pareada, figuras, tablas y análisis.
 - [ ] **3.3 (10 extra)** `finetune_with_lora` y `classify_finetuned` con
       LoRA o DoRA; fijar `LORA_MODEL`; reportar y analizar. Si no se hace, la
       celda se omite sola y el notebook sigue.
-- [x] Informe: 3.1 en `03-punto3-modelos-lenguaje.tex`; 3.2 y 3.3 pendientes.
+- [x] Informe: 3.1 y 3.2 en `03-punto3-modelos-lenguaje.tex`; 3.3 pendiente.
 
 ## Integración
 
@@ -405,10 +431,12 @@ Registro de verificaciones realizadas y trabajo pendiente:
       Regenerar los subtítulos de las figuras para indicar muestras del 30 %,
       transferir los ocho artefactos con SHA-256, limpiar las salidas de
       desarrollo y recompilar ambos PDF con las figuras corregidas.
-      La configuración y los algoritmos de 1 y 2 no cambian; sin commit ni push.
+      La configuración y los algoritmos de 1 y 2 no cambian. Cierre publicado
+      posteriormente en `2534503` por autorización.
 - [x] Autorizar el respaldo del cierre de 3.1 mediante commit y push a
       `origin/main` antes de iniciar 3.2 (26/10/2026).
-- [ ] Punto 3.2/3.3: decidir modelos adicionales y LoRA/DoRA en equipo.
+- [x] Punto 3.2: confirmar Mistral 7B y Qwen 14B con NF4.
+- [ ] Punto 3.3: decidir modelo base y LoRA/DoRA en equipo.
 - [x] Autenticación HF en WSL mediante login interactivo (confirmación de la
       persona), con token dedicado
       de lectura/alcance limitado; no pegar secretos en notebook, Git ni chat.

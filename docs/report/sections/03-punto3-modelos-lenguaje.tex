@@ -31,9 +31,9 @@ Se informa cuántas respuestas fueron ambiguas.
 predicción de un mensaje no depende de la muestra en que aparece. Por eso cada
 uno de los 5574 mensajes se clasifica una sola vez y las 30 muestras
 estratificadas del 30\,\% (semillas 2026 a 2055) reutilizan esas predicciones.
-El resultado es el mismo que clasificar cada muestra por separado. El modelo
-no se entrena con el dataset, de modo que no hay fuga de entrenamiento hacia
-las muestras. Sin embargo, las muestras se toman de todo el dataset y se
+Así las treinta evaluaciones usan exactamente las mismas predicciones para
+cada mensaje compartido. El modelo no se ajusta con las etiquetas SMS.
+Sin embargo, las muestras se toman de todo el dataset y se
 solapan entre sí, así que la variación entre corridas refleja solo el
 muestreo. Los puntos 1 y 2 se evalúan, en cambio, sobre el 30\,\% de prueba
 de cada partición.
@@ -95,8 +95,129 @@ limita la precisión a pesar de detectar la mayor parte del spam.}
 Este resultado corresponde al modelo, prompt sin ejemplos y decodificación
 confirmados. No se cambió el prompt después de observar las métricas.
 Tampoco permite concluir que cualquier LLM sea inferior: evalúa esta
-configuración concreta. Quedan pendientes los dos modelos adicionales de
-3.2, si el equipo decide realizar el extra.
+configuración concreta. El apartado siguiente conserva esta línea base y
+agrega los dos modelos elegidos para 3.2.
+
+\subsection{Modelos adicionales con cuantización NF4}
+\label{sec:punto32}
+
+\paragraph{Selección y protocolo.} Después de respaldar 3.1, el equipo
+confirmó Mistral-7B-Instruct-v0.3 \cite{mistral7b_v03} y
+Qwen2.5-14B-Instruct \cite{qwen25_14b}, con aproximadamente 7.25 y 14.77
+mil millones de parámetros. Ambos se cargan a 4 bits mediante NF4, con
+doble cuantización y cálculo bfloat16 \cite{hf_bitsandbytes}. Se cuantizan
+las capas lineales al cargar el checkpoint original; otras matrices pueden
+conservar mayor precisión. No se entrenan adaptadores ni se modifica el
+modelo con las etiquetas SMS.
+
+Se mantienen textos originales, prompt sin ejemplos, generación voraz de
+hasta ocho tokens, interpretación de respuestas y las mismas 30 muestras
+estratificadas. Cada tokenizador aplica su propia plantilla de chat. La
+comparación cambia familia, tamaño y precisión de pesos simultáneamente:
+compara configuraciones prácticas, sin atribuir causalmente toda diferencia
+al número de parámetros o a cuantizar.
+No se auditó si los corpus de preentrenamiento contienen mensajes de esta
+colección pública; no puede descartarse exposición previa al dataset.
+
+\paragraph{Reproducción y memoria.} Los modelos se ejecutan de forma
+secuencial en la misma RTX 3080 Ti, liberando uno antes de cargar el otro.
+Las revisiones fijadas son:
+\begin{itemize}
+\item Mistral 7B: \texttt{c170c708c41dac9275d15a8fff4eca08d52bab71}.
+\item Qwen 14B: \texttt{cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8}.
+\end{itemize}
+Se usan Transformers 5.20.2, bitsandbytes 0.50.2 y Accelerate 1.15.0.
+La carga exige que el modelo completo resida en GPU; la prueba rápida
+incluye el prompt más largo del dataset, sin truncamiento. Las cachés NF4
+registran revisión, cuantización, precisión, lote y versiones para no
+confundirlas con respuestas de precisión completa. Los tiempos de generación
+excluyen descarga y carga; el pico de memoria se mide durante la generación.
+
+\paragraph{Resultados.} Se completaron 5574 respuestas por modelo y la
+evaluación de las mismas 30 muestras. La tabla informa media y desviación
+estándar muestral; las respuestas de Qwen 3B se reutilizan como referencia.
+
+\begin{table}[H]
+\centering
+\caption{Tres configuraciones de lenguaje sobre las mismas 30 muestras del 30\,\%.}
+\begin{tabular}{lcc}
+\toprule
+Configuración & Tasa de aciertos & F1-score\\
+\midrule
+Qwen 3B, BF16 & $0.7853\pm0.0073$ & $0.5452\pm0.0090$\\
+Mistral 7B, NF4 & $0.7923\pm0.0084$ & $0.5518\pm0.0108$\\
+Qwen 14B, NF4 & $0.8954\pm0.0065$ & $0.7126\pm0.0139$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{modelos-de-lenguaje-comparacion-de-f1-score-en-30-muestras.png}
+\caption{F1 de las predicciones fijas de cada configuración. Las cajas
+resumen muestras solapadas, no entrenamientos independientes.}
+\end{figure}
+
+\paragraph{Errores e interpretación.} Qwen 14B mejora principalmente la
+precisión de spam: reduce los falsos positivos de 1168 a 552 frente a Qwen
+3B y detecta 721 de los 747 spam (recobrado 96.5\,\%). Su precisión es
+56.6\,\%; las falsas alarmas siguen limitando el F1. Mistral queda cerca
+de la referencia. Sus doce respuestas ambiguas corresponden a ham y no
+añaden spam escapado al aplicar la regla acordada.
+
+\begin{table}[H]
+\centering
+\caption{Errores sobre los 5574 mensajes; no son promedios por muestra.}
+\begin{tabular}{lrrr}
+\toprule
+Configuración & Falsos positivos & Falsos negativos & Ambiguas\\
+\midrule
+Qwen 3B, BF16 & 1168 & 30 & 0\\
+Mistral 7B, NF4 & 1122 & 35 & 12\\
+Qwen 14B, NF4 & 552 & 26 & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Las diferencias pareadas de F1, calculadas por muestra, son +0.0066 para
+Mistral menos Qwen 3B (positiva en 23/30), +0.1675 para Qwen 14B menos
+Qwen 3B y +0.1609 para Qwen 14B menos Mistral (positivas en 30/30).
+Se trata de evidencia descriptiva: el solapamiento entre muestras impide
+tratarlas como treinta experimentos independientes. Tampoco se aísla el
+efecto causal del tamaño o de la cuantización. El prompt se mantuvo fijo
+después de observar estos resultados.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{modelos-de-lenguaje-comparacion-de-tasa-de-aciertos-en-30-muestras.png}
+\caption{Tasa de aciertos bajo el mismo muestreo. Se informa junto con F1
+para reflejar el desbalance entre ham y spam.}
+\end{figure}
+
+\paragraph{Recursos observados.} Los pesos y buffers ocupan 3.75 GiB en
+Mistral y 9.05 GiB en Qwen 14B. La prueba rápida incluyó el prompt máximo
+de cada tokenizador (307 y 312 tokens), sin truncamiento. Los lotes se
+calificaron antes de la inferencia completa, según la memoria disponible.
+
+\begin{table}[H]
+\centering
+\caption{Generación completa en la RTX 3080 Ti. Los tiempos excluyen descarga
+y carga; los picos pertenecen al asignador de PyTorch.}
+\begin{tabular}{lrrrr}
+\toprule
+Modelo NF4 & Lote & Tiempo (s) & Asignado (GiB) & Reservado (GiB)\\
+\midrule
+Mistral 7B & 16 & 168.6 & 4.625 & 5.078\\
+Qwen 14B & 4 & 536.8 & 9.774 & 9.984\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Estos picos no incluyen la memoria de otros procesos ni del controlador.
+Se liberó cada modelo al terminar. Las respuestas se transfirieron con
+SHA-256 y las 30 filas por modelo se reprodujeron en CPU desde las cachés,
+con tolerancia $10^{-12}$ respecto de los CSV. Las figuras individuales,
+las comparativas y las tablas salen de las celdas del notebook.
 
 \subsection{Ajuste fino eficiente}
 

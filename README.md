@@ -56,7 +56,7 @@ AI-TP2/
 |---|---|---|---|---|
 | 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
 | 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | 2.1 y 2.2 listos; detector con D = 2 |
-| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 ejecutado y documentado; 3.2 y 3.3 pendientes |
+| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 y 3.2 ejecutados y documentados; 3.3 pendiente |
 | Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
 Las funciones compartidas del notebook incluyen la carga del dataset, las particiones estratificadas
@@ -152,6 +152,27 @@ y sus celdas de modelo exigen una GPU CUDA, por ejemplo en Google Colab; las
 instrucciones están al inicio de la sección 3 del notebook. `peft` (3.3) sigue
 comentado hasta que el equipo elija el ajuste.
 
+Para 3.2, el equipo confirmó Mistral-7B-Instruct-v0.3 y Qwen2.5-14B-Instruct
+con NF4 de 4 bits, doble cuantización y cálculo bfloat16. El entorno WSL usa
+las dependencias de `requirements-llm-quantized.txt`; la celda opcional de
+instalación comprueba el plan antes de modificarlo y queda desactivada por
+omisión. La carga utiliza un solo modelo y una sola GPU, sin repartir capas
+en CPU. La prueba rápida incluye el prompt más largo del dataset.
+
+`LLM_INFERENCE_PROFILES` fija revisión, lote y versiones. Cambiar
+`LLM_MODEL_NAME` en la celda de selección permite recorrer las celdas de
+carga, prueba, clasificación y liberación con cada modelo. La evaluación
+posterior lee las tres cachés y usa las mismas 30 muestras. Las cachés de
+los perfiles NF4 distinguen revisión y configuración; la referencia de
+Qwen 3B conserva su caché previa. No copiar pesos ni respuestas a Git.
+
+Los dos modelos caben completos en la RTX 3080 Ti: Mistral, lote 16 y
+pico asignado 4.625 GiB; Qwen 14B, lote 4 y pico 9.774 GiB. En las mismas
+30 muestras obtienen F1 0.5518 ± 0.0108 y 0.7126 ± 0.0139, respectivamente,
+frente a 0.5452 ± 0.0090 de la referencia Qwen 3B. Los 5574 mensajes
+tardaron 168.6 y 536.8 s de generación, sin descarga ni carga. Las cachés y
+sus 30 filas de métricas se verificaron también en CPU.
+
 ## Ejecución
 
 Iniciar JupyterLab desde la raíz del repositorio con `py -m jupyter lab`
@@ -200,7 +221,12 @@ verifican la organización del notebook y las dependencias opcionales.
 
 ## Documentación interna
 
-Desde el 26/10/2026 se continúa en `main` con PyCharm conectado a un Jupyter
+Cuando el Mac y Windows están en la misma red, usar la
+[conexión LAN a Jupyter](docs/jupyter-lan.md), verificada el 26/10/2026.
+PyCharm conserva el token y accede al mismo servidor por la IP LAN;
+el firewall limita el acceso al Mac. La guía incluye diagnóstico y reversión.
+
+La conexión inicial del 26/10/2026 usó PyCharm con un Jupyter
 externo de WSL2 mediante Cloudflare Quick Tunnel sin cuenta ni dominio.
 La autenticación usa el token de Jupyter; no versionar el token ni la URL
 temporal. El kernel consultado por MCP detectó CUDA y la RTX 3080 Ti con
@@ -269,7 +295,7 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 58 superadas, ninguna pendiente y ninguna fallida,
+Las pruebas actuales dan 64 superadas, ninguna pendiente y ninguna fallida,
 tanto fuera del notebook como en su celda de pruebas del kernel WSL.
 La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
 logit cero y distinguió la variante D=2 del detector de la D=384 solicitada

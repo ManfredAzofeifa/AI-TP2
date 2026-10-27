@@ -83,10 +83,11 @@ verificación pendiente de `TODO.md`.
   0.5452 ± 0.0090. Sin respuestas ambiguas; 1168 falsos positivos y 30 falsos
   negativos en todo el dataset. Figuras, CSV y análisis de 3.1 completados.
   La nueva ejecución reproduce exactamente la caché anterior y libera el modelo.
-- **Pendiente:** 3.2 y 3.3 (extras), comparación/conclusiones globales y cierre.
-  Tras cerrar 3.1, la persona autorizó respaldar sus cambios en `origin/main`
-  y continuar con 3.2; los modelos adicionales aún requieren selección.
-- **Pruebas verificadas (26/10/2026):** 58 superadas, 0 pendientes, 0 fallidas
+- **Pendiente:** 3.3 (extra), comparación/conclusiones globales y cierre.
+  3.1 está respaldado en `origin/main`; la persona autoriza el commit y la
+  publicación de 3.2 en `origin/main` antes de trabajar en 3.3. Para 3.3
+  se deben consultar modelo, técnica y protocolo experimental con el equipo.
+- **Pruebas verificadas (26/10/2026):** 64 superadas, 0 pendientes, 0 fallidas
   (48/1/0 antes del punto 3.1). `tests/conftest.py` fija el backend `Agg`.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
   la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
@@ -141,11 +142,43 @@ verificación pendiente de `TODO.md`.
   guardadas de WSL coinciden en fuente con el notebook local; la
   configuración y los algoritmos de 1 y 2 siguen sin cambios. El notebook
   de desarrollo queda sin salidas; los PDF se recompilan con las figuras
-  corregidas. Los cambios permanecen sin commit ni push.
+  corregidas. Ese cierre se publicó después en `2534503` por autorización.
 - **Respaldo autorizado (26/10/2026):** la persona solicita hacer commit y
   push del cierre de 3.1 a `origin/main` antes de trabajar en 3.2. Esta
   autorización sustituye el límite anterior para ese respaldo; no cubre
   elegir los modelos pendientes ni realizar el extra 3.3.
+- **3.2 completo (26/10/2026):** 3.1 respaldado en `origin/main`, commit
+  `2534503`. Después, la persona confirmó `mistralai/Mistral-7B-Instruct-v0.3`
+  y `Qwen/Qwen2.5-14B-Instruct`, ambos NF4 con doble cuantización y cálculo
+  bfloat16, y autorizó descargar y evaluar uno a la vez en WSL. Revisiones:
+  `c170c708c41dac9275d15a8fff4eca08d52bab71` y
+  `cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8`, respectivamente.
+  `load_llm` conserva su firma; `load_llm_nf4` usa una GPU completa y no
+  permite descargar capas a CPU/disco. Las cachés NF4 incluyen revisión,
+  lote, precisión y versiones; la caché de 3.1 conserva su identidad.
+  WSL tiene `accelerate==1.15.0` y `bitsandbytes==0.50.2`, sin cambiar
+  PyTorch ni Transformers. 5574 respuestas por modelo, mismas 30 muestras:
+  Mistral: accuracy 0.7923 ± 0.0084, F1 0.5518 ± 0.0108; Qwen 14B:
+  accuracy 0.8954 ± 0.0065, F1 0.7126 ± 0.0139. Tiempos de generación:
+  168.6/536.8 s; lotes 16/4; picos asignados 4.625/9.774 GiB. Mistral
+  tiene 12 respuestas ambiguas (todas ham); Qwen 14B, ninguna. Frente a
+  Qwen 3B, Qwen 14B reduce falsos positivos de 1168 a 552 y falsos negativos
+  de 30 a 26. Las diferencias son descriptivas; las muestras se solapan.
+  Se exportaron e inspeccionaron figuras y se verificaron 22 artefactos por
+  SHA-256; las 30 filas por modelo se reprodujeron en CPU con tolerancia
+  1e-12. Suite local y celda WSL: 64 superadas. Modelos liberados de GPU.
+  Las fuentes de las 69 celdas guardadas coinciden entre Mac y WSL; ambas
+  copias quedan sin salidas de desarrollo, con respaldo ejecutado local.
+  Investigación y fuentes: `docs/research/punto3-2-modelos-cuantizados.md`.
+- **Acceso LAN (26/10/2026):** PyCharm llega al Jupyter existente por la IP
+  LAN de Windows; reenvío a localhost y firewall limitado al Mac. Se
+  verificaron HTTP 200, rechazo sin token y ejecución Linux/CUDA por MCP.
+  El túnel de Jupyter quedó retirado tras comprobar la LAN.
+  Configuración, DHCP y reversión: `docs/jupyter-lan.md`. El kernel antiguo
+  ya no existía al retomar; su salida registra un error de ZeroMQ durante
+  los widgets Xet. Se recuperaron los tres blobs de Mistral verificados por
+  SHA-256 y se desactivó ese progreso en las cargas siguientes. Conservar
+  las cachés; cambiar la conexión de red no exige reiniciar las sesiones.
 
 ## Próximos pasos
 
@@ -168,8 +201,8 @@ Lista completa y notas de ejecución en
 3. Punto 3: 3.1 ya tiene modelo, prompt y regla de ambigüedad confirmados.
    Su línea base, caché, figuras y análisis están completos; reutilizar la
    caché para evaluar sin volver a cargar el modelo.
-   No elegir los modelos de 3.2 ni LoRA/DoRA
-   sin confirmación del equipo; proponer opciones.
+   3.2 también está completo: reutilizar las tres cachés y las revisiones
+   registradas arriba. LoRA/DoRA sigue pendiente de decisión.
    El kernel remoto ya está conectado: no exigir SSH, dominio ni cuenta
    Cloudflare para continuar. Comprobar host y CUDA desde ese kernel antes
    de experimentar; los comandos de terminal del Mac siguen siendo locales.
@@ -321,7 +354,8 @@ Lista completa y notas de ejecución en
 - No descargar modelos grandes ni ejecutar inferencias largas sin
   confirmación.
   La autorización del 26/10/2026 cubre la descarga y evaluación del modelo
-  ya confirmado para 3.1 en WSL. No cambia las decisiones pendientes de 3.2/3.3.
+  ya confirmado para 3.1 en WSL. La autorización posterior de 3.2 y sus
+  modelos figura en el estado actual; 3.3 aún requiere confirmación.
 - HF: autenticar interactivamente en WSL con un token dedicado de lectura,
   preferiblemente de alcance limitado. No escribir tokens en celdas, argumentos,
   salidas, Git ni chat. El login de HF se guarda fuera del repositorio; quienes

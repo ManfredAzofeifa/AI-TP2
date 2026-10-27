@@ -1,0 +1,16 @@
+,respuesta,etiqueta,ambigua,mensajes
+0,ham,ham,False,3715
+1,spam,spam,False,1832
+2,unclassified (or ambiguous),ham,True,3
+3,ham (this message is in malay,ham,False,2
+4,ham (this message is in a language,ham,False,1
+5,ham (this message appears to be in,ham,False,1
+6,unclassifiable (due to ambiguity,ham,True,1
+7,spam (assuming the recipient doesn,spam,False,1
+8,ham (this message is too short and,ham,False,1
+9,ham (as the message contains no sp,ham,False,1
+10,unclassifiable (or unknown),ham,True,1
+11,ham (this message is in portuguese and,ham,False,1
+12,"neutral (without additional context,",ham,True,1
+13,ham (this message is in tamil,ham,False,1
+14,unclassifiable (as the message is,ham,True,1

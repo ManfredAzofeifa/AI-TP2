@@ -1,0 +1,4 @@
+comparación,diferencia media F1,desviación muestral,muestras con diferencia positiva
+Mistral 7B (NF4) - Qwen 3B (BF16),0.006604325719115034,0.00994114331883151,23
+Qwen 14B (NF4) - Qwen 3B (BF16),0.16746402127688284,0.012654178649170284,30
+Qwen 14B (NF4) - Mistral 7B (NF4),0.16085969555776783,0.012193042295493488,30

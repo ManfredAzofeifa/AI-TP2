@@ -19,8 +19,9 @@ La implementación completa vive en el notebook
 \texttt{tp2\_detector\_spam.ipynb}, organizado en celdas de definiciones,
 configuración, experimentos y análisis. Las pruebas externas cargan las
 mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
-figuras y tablas provienen de la ejecución completa de sus secciones; el
-punto 3.1 está implementado y falta ejecutarlo en GPU.
+figuras y tablas provienen de la ejecución completa de sus secciones. La
+línea base 3.1 ya se evaluó en GPU; 3.2 agrega dos modelos con cuantización
+NF4 y el extra 3.3 sigue pendiente de decisión.
 
 \subsection{Protocolo común}
 
@@ -49,6 +50,7 @@ punto 3.1 está implementado y falta ejecutarlo en GPU.
     \item Punto 3.1: \texttt{Qwen/Qwen2.5-3B-Instruct}, prompt sin ejemplos
     en inglés y decodificación voraz; las respuestas ambiguas cuentan como
     ham. Las 30 muestras estratificadas del 30~\% usan las semillas de los
-    puntos 1 y 2 (Sección~\ref{sec:punto3}). Los modelos de 3.2 y el ajuste
-    de 3.3 siguen pendientes de decisión del equipo.
+    puntos 1 y 2 (Sección~\ref{sec:punto3}). Para 3.2 se confirmaron
+    Mistral-7B-Instruct-v0.3 y Qwen2.5-14B-Instruct, ambos con NF4 de 4 bits
+    y cálculo bfloat16. El ajuste de 3.3 sigue pendiente de decisión.
 \end{itemize}

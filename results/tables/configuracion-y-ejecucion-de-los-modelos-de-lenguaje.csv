@@ -1,2 +1,4 @@
-,model_revision,device,dtype,batch_size,seconds,torch
-Qwen/Qwen2.5-3B-Instruct,aa8e72537993ba99e69dfaafa59ed015b17504d1,NVIDIA GeForce RTX 3080 Ti (12.0 GiB),torch.bfloat16,16,84.2,2.14.0+cu130
+,model_revision,device,dtype,batch_size,seconds,torch,inference_profile,peak_allocated_GiB,peak_reserved_GiB
+Qwen/Qwen2.5-3B-Instruct,aa8e72537993ba99e69dfaafa59ed015b17504d1,NVIDIA GeForce RTX 3080 Ti (12.0 GiB),torch.bfloat16,16,84.2,2.14.0+cu130,,,
+mistralai/Mistral-7B-Instruct-v0.3,c170c708c41dac9275d15a8fff4eca08d52bab71,NVIDIA GeForce RTX 3080 Ti (12.0 GiB),torch.bfloat16,16,168.6,2.14.0+cu130,"{'quantization': 'nf4', 'revision': 'c170c708c41dac9275d15a8fff4eca08d52bab71', 'batch_size': 16, 'compute_dtype': 'bfloat16', 'bitsandbytes_version': '0.50.2', 'transformers_version': '5.20.2'}",4.625,5.078
+Qwen/Qwen2.5-14B-Instruct,cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8,NVIDIA GeForce RTX 3080 Ti (12.0 GiB),torch.bfloat16,4,536.8,2.14.0+cu130,"{'quantization': 'nf4', 'revision': 'cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8', 'batch_size': 4, 'compute_dtype': 'bfloat16', 'bitsandbytes_version': '0.50.2', 'transformers_version': '5.20.2'}",9.774,9.984

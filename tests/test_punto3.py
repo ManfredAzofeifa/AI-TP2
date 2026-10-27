@@ -15,6 +15,105 @@ from types import SimpleNamespace
 from notebook_loader import notebook as punto3
 
 
+def test_nf4_loader_pins_revision_and_avoids_full_precision_move(monkeypatch):
+    """!
+    @brief La carga NF4 fija revisión y GPU sin mover después un modelo de precisión completa.
+    @param monkeypatch Fixture que sustituye CUDA y las bibliotecas opcionales sin descargas.
+    @return None.
+    """
+    calls = {}
+    tokenizer = SimpleNamespace(pad_token=None, eos_token="EOS")
+    model = SimpleNamespace(is_loaded_in_4bit=True, hf_device_map={"": "cuda"}, eval=lambda: None)
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setitem(sys.modules, "accelerate", SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "bitsandbytes", SimpleNamespace())
+
+    def record_load(name, **kwargs):
+        """!
+        @brief Registra la carga simulada sin ofrecer un método to.
+        @param name Identificador solicitado.
+        @param kwargs Opciones enviadas a Transformers.
+        @return Modelo simulado que ya reside en GPU.
+        """
+        calls.update(kwargs)
+        return model
+
+    def record_tokenizer(name, **kwargs):
+        """!
+        @brief Registra la revisión del tokenizador para compararla con la de los pesos.
+        @param name Identificador solicitado.
+        @param kwargs Opciones de carga del tokenizador.
+        @return Tokenizador simulado.
+        """
+        calls["tokenizer_revision"] = kwargs["revision"]
+        assert kwargs["padding_side"] == "left"
+        return tokenizer
+
+    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(
+        AutoTokenizer=SimpleNamespace(from_pretrained=record_tokenizer),
+        AutoModelForCausalLM=SimpleNamespace(from_pretrained=record_load),
+        BitsAndBytesConfig=lambda **kwargs: kwargs,
+    ))
+    result = punto3.load_llm_nf4("org/model", "a" * 40)
+    assert result.revision == calls["revision"] == calls["tokenizer_revision"] == "a" * 40
+    assert calls["device_map"] == {"": "cuda"}
+    assert calls["quantization_config"] == {
+        "load_in_4bit": True, "bnb_4bit_quant_type": "nf4",
+        "bnb_4bit_use_double_quant": True, "bnb_4bit_compute_dtype": torch.bfloat16,
+    }
+    assert tokenizer.pad_token == "EOS"
+
+
+@pytest.mark.parametrize("device,revision,error", [
+    ("cpu", "a" * 40, RuntimeError),
+    ("cuda", "main", ValueError),
+    ("cuda", "", ValueError),
+])
+def test_nf4_loader_rejects_cpu_and_mutable_revision(monkeypatch, device, revision, error):
+    """!
+    @brief El cargador rechaza CPU y revisiones mutables antes de importar dependencias.
+    @param monkeypatch Fixture que simula disponibilidad de CUDA.
+    @param device Dispositivo del caso.
+    @param revision Revisión del caso.
+    @param error Tipo de error esperado.
+    @return None.
+    """
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    with pytest.raises(error):
+        punto3.load_llm_nf4("org/model", revision, device)
+
+
+def test_nf4_cache_distinguishes_revision_quantization_and_batch(tmp_path):
+    """!
+    @brief Una caché NF4 no se confunde con precisión completa, otra revisión ni otro lote.
+    @param tmp_path Carpeta temporal de cachés.
+    @return None.
+    """
+    args = (["hola", "WIN"], "org/model", "P: {message}", 8)
+    profile = {"quantization": "nf4", "revision": "a" * 40,
+               "batch_size": 1, "compute_dtype": "bfloat16"}
+    metadata = punto3.llm_profile_metadata(*args, profile)
+    path = punto3.llm_responses_path(tmp_path, metadata)
+    punto3.save_llm_responses(path, metadata, ["ham", "spam"])
+    for changed in ({**profile, "revision": "b" * 40}, {**profile, "batch_size": 2},
+                    {**profile, "compute_dtype": "float16"}):
+        other = punto3.llm_profile_metadata(*args, changed)
+        assert punto3.llm_responses_path(tmp_path, other) != path
+        with pytest.raises(ValueError):
+            punto3.load_llm_responses(path, other)
+    original = punto3.llm_cache_metadata(*args)
+    assert punto3.llm_responses_path(tmp_path, original) != path
+
+
+def test_unquantized_profile_preserves_baseline_cache():
+    """!
+    @brief El perfil sin cuantización conserva exactamente la identidad de la caché de 3.1.
+    @return None.
+    """
+    args = (["hola"], "org/model", "P: {message}", 8)
+    assert punto3.llm_profile_metadata(*args, {"quantization": None, "batch_size": 16}) == punto3.llm_cache_metadata(*args)
+
+
 def test_load_llm_pins_tokenizer_and_weights_without_config_commit(monkeypatch, tmp_path):
     """!
     @brief Registra la revisión real aunque Transformers no conserve config._commit_hash.

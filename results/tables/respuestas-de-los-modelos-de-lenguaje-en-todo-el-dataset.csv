@@ -1,2 +1,4 @@
 ,respuestas ambiguas,predichos spam,spam reales,mensajes
 Qwen/Qwen2.5-3B-Instruct,0,1885,747,5574
+mistralai/Mistral-7B-Instruct-v0.3,12,1834,747,5574
+Qwen/Qwen2.5-14B-Instruct,0,1273,747,5574

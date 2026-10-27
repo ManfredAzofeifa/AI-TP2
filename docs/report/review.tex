@@ -29,7 +29,8 @@ $D=2$ del equipo difiere de reutilizar $D=384$, como pide la lectura literal
 del enunciado: su aceptación sigue pendiente. Se mantienen las
 configuraciones vigentes. Las falsas alarmas limitan la precisión de la
 línea base LLM. Tras cerrar 3.1, la persona autoriza respaldar sus cambios
-en main y continuar con 3.2; la selección de modelos y el extra 3.3 siguen pendientes.
+en main y completar 3.2. Mistral 7B NF4 obtiene F1 0.5518 y Qwen 14B
+NF4, 0.7126 en las mismas muestras. El extra 3.3 sigue pendiente de decisión.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -560,8 +561,96 @@ Los subtítulos de las dos figuras ahora describen muestras del 30\,\%;
 las figuras y las seis tablas se transfirieron comprobando SHA-256.
 Se conserva un respaldo ejecutado antes de limpiar las salidas del notebook
 de desarrollo. La configuración y los algoritmos de los puntos 1 y 2 no
-cambian. Se recompilan ambos PDF con las figuras corregidas; los cambios
-permanecen sin commit ni push.
+cambian. Se recompilan ambos PDF con las figuras corregidas. Este cierre
+se publicó después en \texttt{2534503} por autorización expresa.
+
+\section{Punto 3.2: modelos adicionales cuantizados (26/10/2026)}
+El cierre de 3.1 se respaldó en origin/main mediante el commit
+\texttt{2534503}. Después la persona confirmó
+\texttt{mistralai/Mistral-7B-Instruct-v0.3} y
+\texttt{Qwen/Qwen2.5-14B-Instruct}, ambos con NF4 de 4 bits, doble
+cuantización y cálculo bfloat16. Se autorizó su descarga y evaluación
+secuencial en WSL. El prompt, la generación voraz de hasta 8 tokens, la
+interpretación de respuestas y las 30 muestras de 3.1 se conservan.
+
+Se agrega un cargador separado, sin cambiar la firma de \texttt{load\_llm}.
+Fija revisión de tokenizador y pesos, exige CUDA y mantiene todo el modelo
+en una GPU. La caché NF4 incorpora revisión, cuantización, lote y versiones;
+la caché original de 3.1 conserva su identidad. Las seis pruebas nuevas
+protegen la carga cuantizada y evitan confundir esas cachés: la suite local
+da 64 superadas. En WSL se instalaron \texttt{accelerate==1.15.0} y
+\texttt{bitsandbytes==0.50.2}, sin modificar PyTorch ni Transformers.
+Las fuentes y alternativas se conservan en
+\texttt{docs/research/punto3-2-modelos-cuantizados.md}.
+
+\subsection{Resultados y verificación de 3.2}
+Se completaron los 5574 mensajes por modelo y las mismas 30 muestras
+estratificadas del 30\,\%, sin modificar el prompt ni la interpretación.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Configuración & Tasa de aciertos & F1-score\\
+\midrule
+Qwen 3B, BF16 & $0.7853\pm0.0073$ & $0.5452\pm0.0090$\\
+Mistral 7B, NF4 & $0.7923\pm0.0084$ & $0.5518\pm0.0108$\\
+Qwen 14B, NF4 & $0.8954\pm0.0065$ & $0.7126\pm0.0139$\\
+\bottomrule
+\end{tabular}
+\caption{Media y desviación muestral en las mismas 30 muestras.}
+\end{table}
+
+Qwen 14B reduce los falsos positivos de 1168 a 552 frente a Qwen 3B y
+los falsos negativos de 30 a 26. Mistral tiene 1122 falsos positivos y
+35 falsos negativos. Sus doce respuestas ambiguas son ham; Qwen 14B no
+tiene respuestas ambiguas. La diferencia pareada media de F1 es +0.0066
+para Mistral menos Qwen 3B (23/30 positivas), +0.1675 para Qwen 14B menos
+Qwen 3B y +0.1609 para Qwen 14B menos Mistral (30/30 positivas en ambos).
+Son comparaciones descriptivas con muestras solapadas, sin prueba de
+significación ni atribución causal al tamaño o a cuantizar.
+
+Mistral usó lote 16, 168.6 s y picos de 4.625 GiB asignados y 5.078 GiB
+reservados por PyTorch; Qwen 14B, lote 4, 536.8 s y picos 9.774/9.984 GiB.
+Los tiempos excluyen descarga y carga; la memoria no incluye otros
+procesos ni el controlador. Ambos modelos residieron completos en GPU
+y se liberaron al terminar.
+
+Se exportaron ocho figuras y once CSV, junto con tres cachés excluidas
+de Git: 22 artefactos transferidos y verificados por SHA-256. Se miraron
+todas las figuras. En el Mac, las funciones del notebook reprodujeron
+las 30 filas de cada modelo desde sus cachés, con tolerancia $10^{-12}$
+respecto de los CSV. La celda WSL dio 64/0/0, igual que pytest local.
+El notebook conserva una única implementación. Las fuentes de las 69
+celdas guardadas coinciden entre Mac y WSL; ambas copias de desarrollo
+quedan sin salidas y se conserva un respaldo ejecutado. La persona autoriza
+el commit y la publicación de este estado de 3.2 en origin/main antes de
+iniciar 3.3; solicita consultar las decisiones de fine-tuning y mantener
+el alcance del enunciado y del curso.
+
+\subsection{Conexión local y recuperación de la carga}
+Jupyter y el reenvío de Windows solo escuchaban en localhost. Se publicó
+TCP 8888 en la dirección LAN de Windows mediante \texttt{portproxy},
+conservando el servidor existente. El firewall permite únicamente la
+dirección del Mac en la interfaz LAN; no se cambió el perfil de red.
+PyCharm mostró conexión correcta y ejecutó una celda por MCP en Linux
+con CUDA y la RTX 3080 Ti. Sin autenticación, la API devuelve HTTP 403;
+la página de acceso devuelve HTTP 200. En tres consultas por ruta,
+la mediana fue 0.035 s por LAN y 0.374 s por el túnel: es una comprobación
+breve de HTTP, no una medición de inferencia. La configuración y reversión
+están en \texttt{docs/jupyter-lan.md}.
+Se retiró únicamente el túnel de Jupyter después de verificar la LAN;
+la dirección pública dejó de responder y la conexión directa siguió activa.
+
+El kernel antiguo ya no existía. Su salida conservada registra un error
+de ZeroMQ de archivos abiertos durante actualizaciones de widgets Xet;
+no basta para identificar por sí solo el primer recurso agotado. Los tres
+archivos de pesos de Mistral, 14\,496\,080\,928 bytes, estaban completos,
+verificados contra los SHA-256 oficiales y protegidos con enlaces duros.
+Se recuperaron sin repetir la descarga. Las cargas siguientes usan HTTP
+y desactivan las barras de Hugging Face. Mistral cargó en NF4: 3.75 GiB
+de pesos y buffers; la prueba rápida pasó con el prompt máximo de 307
+tokens y lote 16. La red se configuró sin reiniciar Jupyter ni WSL.
 
 \section{Puntos pendientes}
 El punto 2 está implementado; su conformidad literal requiere resolver la
@@ -572,8 +661,8 @@ La referencia con $D=384$ ya tiene 30 corridas; la persona
 confirmó mantener la configuración vigente y no adoptar las alternativas.
 \item Avisar al equipo que el detector vigente usa 2 componentes y la
 regresión 384; las constantes no se cambiaron durante la auditoría.
-\item Punto 3.1 completo. La persona confirmó terminar solo esta línea base;
-3.2 (dos modelos más) y 3.3 (LoRA o DoRA) quedan pendientes de decisión.
+\item Puntos 3.1 y 3.2 completos; publicación de 3.2 autorizada antes de 3.3.
+El extra 3.3 (LoRA o DoRA) sigue pendiente de decisión.
 \item Completar la comparación de métodos y las conclusiones del informe.
 \item Confirmar integrantes y fecha de entrega; después, ejecución final
 completa, Doxygen, PDF final y \texttt{.zip}.
@@ -605,8 +694,9 @@ de diagnóstico CUDA, con respaldo, y se conservan las implementaciones y
 pruebas del equipo. Los conflictos en este registro y en las instrucciones
 se reconcilian; el PDF se regenera desde el TeX. Tras incorporar el commit
 había 56/0/0; después de las dos regresiones nuevas hay 58/0/0.
-La persona autoriza descargar y evaluar 3.1 en WSL. Los modelos adicionales
-y LoRA/DoRA siguen pendientes de decisión; no cambian las constantes de 1 y 2.
+La persona autoriza descargar y evaluar 3.1 en WSL. En ese momento los modelos
+adicionales y LoRA/DoRA estaban pendientes; 3.2 se confirmó y evaluó después,
+como se documenta arriba. No cambian las constantes de 1 y 2.
 Las órdenes de terminal del Mac siguen siendo locales; para trabajar con
 la GPU se usa el kernel remoto conectado. No se guardan URL ni tokens del
 túnel en el repositorio.
@@ -692,7 +782,17 @@ Se fija la revisión de pesos/tokenizador y se corrige el ejecutor pytest;
 58 pruebas pasan también en el notebook.\\
 26/10/2026 & Respaldar el cierre de 3.1 en origin/main antes de iniciar 3.2. &
 Solicitud expresa de la persona: se autoriza commit y push del estado
-verificado. Los modelos adicionales y el ajuste fino siguen sin decidir.\\
+verificado. Los dos modelos adicionales se confirmaron posteriormente;
+el ajuste fino sigue pendiente.\\
+26/10/2026 & Evaluar Mistral 7B y Qwen 14B con NF4 de 4 bits. &
+Elección de la persona después del respaldo de 3.1: dos familias, revisiones
+fijadas y ejecución secuencial en WSL; mismo prompt y muestreo.\\
+26/10/2026 & Conectar PyCharm por LAN y conservar Jupyter en localhost. &
+Reenvío de Windows y firewall limitado al Mac; ejecución CUDA verificada.
+Recuperar pesos de Mistral por SHA-256, sin repetir la descarga.\\
+26/10/2026 & Publicar el cierre verificado de 3.2 antes de iniciar 3.3. &
+Solicitud expresa de la persona: commit y push; consultar modelo, técnica
+y evaluación del ajuste eficiente antes de entrenar.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -701,8 +801,9 @@ verificado. Los modelos adicionales y el ajuste fino siguen sin decidir.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} (26/10/2026, con el punto 3.1 implementado): 58
-superadas, 0 pendientes y 0 fallidas. Antes del punto 3.1 eran 48/1/0. La
+\item \texttt{pytest} (26/10/2026, con 3.1 y 3.2): 64
+superadas, 0 pendientes y 0 fallidas, también en la celda WSL.
+Al cerrar 3.1 eran 58/0/0; antes del punto 3.1, 48/1/0. La
 prueba de la derivada reprodujo el fallo antes de la corrección y pasa
 después. Las pruebas usan el backend \texttt{Agg} de Matplotlib.
 \item Notebook guardado validado con \texttt{nbformat}, IDs únicos y AST.
@@ -728,8 +829,8 @@ experimentales a mano.
 \item Revisión e informe preliminar compilados mediante los dos comandos
 \texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
 de las páginas renderizadas.
-El punto 3.1 se ejecutó y documentó; la comparación global y las
-conclusiones finales permanecen pendientes, junto con la decisión sobre los extras.
+Los puntos 3.1 y 3.2 se ejecutaron y documentaron; la comparación global y
+las conclusiones finales permanecen pendientes, junto con la decisión de 3.3.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 
