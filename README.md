@@ -56,7 +56,7 @@ AI-TP2/
 |---|---|---|---|---|
 | 1. Regresión logística (60) | 1.1 a 1.5 | `tests/test_punto1.py` | `01-punto1-regresion-logistica.tex` | 1.1–1.5 verificados con MPNet 768; D = 384 confirmada |
 | 2. Detección de anomalías (30) | 2.1 y 2.2 | `tests/test_punto2.py` | `02-punto2-deteccion-anomalias.tex` | 2.1 y 2.2 listos; detector con D = 2 |
-| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py` | `03-punto3-modelos-lenguaje.tex` | 3.1 y 3.2 ejecutados y documentados; 3.3 pendiente |
+| 3. Modelos de lenguaje (10 + 20 extra) | 3.1 a 3.3 | `tests/test_punto3.py`, `tests/test_punto3_finetuning.py` | `03-punto3-modelos-lenguaje.tex` | 3.1, 3.2 y piloto 3.3 verificados |
 | Funciones compartidas | Configuración, datos, métricas, corridas, figuras y tablas | `tests/test_utils.py` | — | implementado |
 
 Las funciones compartidas del notebook incluyen la carga del dataset, las particiones estratificadas
@@ -149,8 +149,8 @@ incluye `sentence-transformers`, que usa el codificador del punto 1.4:
 a la caché de Hugging Face. No descargar modelos grandes ni ejecutar
 inferencias largas sin confirmación. El punto 3.1 usa `transformers` (ya incluido)
 y sus celdas de modelo exigen una GPU CUDA, por ejemplo en Google Colab; las
-instrucciones están al inicio de la sección 3 del notebook. `peft` (3.3) sigue
-comentado hasta que el equipo elija el ajuste.
+instrucciones están al inicio de la sección 3 del notebook. PEFT para 3.3
+se instala mediante el archivo opcional descrito abajo.
 
 Para 3.2, el equipo confirmó Mistral-7B-Instruct-v0.3 y Qwen2.5-14B-Instruct
 con NF4 de 4 bits, doble cuantización y cálculo bfloat16. El entorno WSL usa
@@ -172,6 +172,24 @@ pico asignado 4.625 GiB; Qwen 14B, lote 4 y pico 9.774 GiB. En las mismas
 frente a 0.5452 ± 0.0090 de la referencia Qwen 3B. Los 5574 mensajes
 tardaron 168.6 y 536.8 s de generación, sin descarga ni carga. Las cachés y
 sus 30 filas de métricas se verificaron también en CPU.
+
+Para 3.3 se confirmó Qwen 14B con LoRA sobre NF4 y PEFT 0.21.0
+(`requirements-llm-finetuning.txt`). El notebook explica la actualización
+de bajo rango, la pérdida sobre ham/spam y EOS y el entrenamiento explícito
+en PyTorch. El piloto usa rango 8, alpha 16, tasa 2e-4, una época,
+microbatch 1 y acumulación de 16. Se entrena una partición externa 70/30
+fija, reservando 20 % de su entrenamiento para validar. La prueba física
+de capacidad restaura pesos y aleatoriedad antes del ajuste definitivo.
+
+`RUN_LORA_TRAINING` controla el ajuste; los adaptadores, estados de progreso
+y respuestas se guardan en `data/processed/lora/` y no se versionan. La
+evaluación compara antes/después sobre la misma prueba reservada y puede
+leer respuestas completas sin GPU. La partición por filas conserva textos
+repetidos: se informa esa limitación y un diagnóstico adicional sin textos
+de ajuste presentes en la prueba. El piloto se completó (26/10/2026): una
+época de 196 pasos en 3498.5 s, pico de 10.19 GiB asignados. En la prueba de
+1672 filas, F1 pasó de 0.7120 a 0.9708 y los falsos positivos de 174 a 5;
+los falsos negativos subieron de 4 a 8. `RUN_LORA_TRAINING` quedó desactivado.
 
 ## Ejecución
 
@@ -195,8 +213,9 @@ elegir **Kernel → Restart Kernel and Run All Cells…**.
   particiones por filas pueden compartir textos idénticos entre entrenamiento
   y prueba, limitación que debe considerarse al interpretar las métricas.
 - Mientras haya puntos pendientes, la ejecución se detiene en el primer
-  `NotImplementedError` e indica qué apartado falta. El punto 3.3 (extra) se
-  omite solo si `LORA_MODEL` no está definido.
+  `NotImplementedError` e indica qué apartado falta. El ajuste de 3.3 ya está en
+  caché: con `RUN_LORA_TRAINING = False` se evalúa sin GPU ni nuevo
+  entrenamiento; si faltan las respuestas, se reutiliza el adaptador guardado.
 - La sección **Pruebas unitarias** necesita las definiciones y la celda de
   configuración; no requiere ejecutar los experimentos para ver el avance.
 
@@ -295,7 +314,7 @@ El estado vigente de las pruebas, las ejecuciones y los PDF se registra en
 24/10/2026 confirmó que el dataset versionado es idéntico al archivo oficial
 de UCI. El cambio confirmado a MPNet 768 y a validación interna por corrida
 se verificó con 30 corridas por método en 1.4 y 1.5, antes de ejecutar 1.3.
-Las pruebas actuales dan 64 superadas, ninguna pendiente y ninguna fallida,
+Las pruebas actuales dan 77 superadas, ninguna pendiente y ninguna fallida,
 tanto fuera del notebook como en su celda de pruebas del kernel WSL.
 La auditoría de 1 y 2 añadió la verificación del gradiente de `forward` en
 logit cero y distinguió la variante D=2 del detector de la D=384 solicitada

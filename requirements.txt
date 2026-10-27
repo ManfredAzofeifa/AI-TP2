@@ -19,6 +19,6 @@ pytest
 sentence-transformers==6.1.0
 transformers==5.20.2
 # Point 3.1 uses transformers (above) on a CUDA GPU (e.g. Google Colab).
-# Point 3.3 (LoRA/DoRA): uncomment and pin once the team chooses the setup.
+# Point 3.3 optional CUDA setup: requirements-llm-finetuning.txt pins PEFT.
 # peft
 # accelerate

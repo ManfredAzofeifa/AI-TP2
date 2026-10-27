@@ -1,0 +1,5 @@
+parte,mensajes,ham,spam
+train,3902,3379,523
+fit,3121,2703,418
+validation,781,676,105
+test,1672,1448,224

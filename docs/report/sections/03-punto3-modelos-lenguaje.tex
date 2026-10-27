@@ -220,6 +220,146 @@ con tolerancia $10^{-12}$ respecto de los CSV. Las figuras individuales,
 las comparativas y las tablas salen de las celdas del notebook.
 
 \subsection{Ajuste fino eficiente}
+\label{sec:punto33}
 
-TODO (punto 3.3, extra): describir el ajuste con LoRA \cite{hu2021lora} o
-DoRA \cite{liu2024dora} y analizar sus resultados.
+\paragraph{Decisión y alcance.} Para 3.3 se eligió ajustar
+Qwen2.5-14B-Instruct, uno de los dos modelos adicionales de 3.2, mediante
+LoRA \cite{hu2021lora} sobre su base NF4 congelada. Esta combinación sigue
+el enfoque de ajuste sobre pesos cuantizados de QLoRA
+\cite{dettmers2023qlora,peft_lora_training}; no se utiliza DoRA
+\cite{liu2024dora}. El equipo confirmó PEFT para los adaptadores y un
+bucle explícito de entrenamiento en PyTorch. El enunciado de 3.3 pide
+entrenar y analizar, sin fijar 30 entrenamientos; se acordó un único piloto.
+
+\paragraph{Adaptación de bajo rango.} Para cada matriz lineal congelada
+$W_0\in\mathbb{R}^{d_{\mathrm{out}}\times d_{\mathrm{in}}}$, se aprende
+una actualización
+\[
+  W = W_0 + \frac{\alpha}{r}BA,\qquad
+  A\in\mathbb{R}^{r\times d_{\mathrm{in}}},\quad
+  B\in\mathbb{R}^{d_{\mathrm{out}}\times r}.
+\]
+El rango es $r=8$ y la escala $\alpha=16$. Solo se optimizan las matrices
+de adaptación: 34\,406\,400 parámetros. Se adaptan las proyecciones de
+atención \texttt{q/k/v/o\_proj} y las del bloque de avance
+\texttt{gate/up/down\_proj}, con dropout 0.05 y sin entrenar sesgos.
+La base conserva NF4 y sus matrices no cuantizadas BF16. Las matrices
+LoRA y los estados del optimizador usan FP32; el cálculo CUDA usa BF16.
+
+\paragraph{Datos y separación.} Se fija la semilla 2026 para una partición
+estratificada externa 70/30. De sus 3902 filas de entrenamiento se reserva
+20\,\% para validar, mediante otra partición estratificada con semilla
+2027. Por tanto, el ajuste recibe 3121 mensajes (2703 ham y 418 spam),
+la validación 781 (676/105) y la prueba 1672 (1448/224). Las filas de
+prueba no intervienen en el gradiente ni en la elección de parámetros.
+
+La separación es por filas y conserva los duplicados del archivo UCI.
+Hay 127 textos de prueba presentes en el ajuste efectivo y 150 en el
+entrenamiento externo completo. Esto limita la interpretación como
+generalización a textos nunca vistos. Se informa también un diagnóstico
+sobre las 1545 filas de prueba sin texto presente en ajuste; usa los mismos
+modelos y predicciones, sin modificar la partición principal ni reentrenar.
+
+\paragraph{Objetivo supervisado.} Se mantiene exactamente el prompt y la
+plantilla de chat de 3.2. Cada ejemplo agrega la respuesta correcta
+\texttt{ham} o \texttt{spam} y el token de fin de respuesta. La entropía
+cruzada causal solo supervisa esos tokens; prompt y padding se enmascaran
+con $-100$. Para un conjunto de respuestas $R_i$, la pérdida media es
+\[
+ \mathcal{L}=-\frac{1}{m}\sum_{i=1}^{m}\frac{1}{|R_i|}
+       \sum_{t\in R_i}\log p_\theta(y_{i,t}\mid\text{prompt}_i,y_{i,<t}).
+\]
+La cabeza calcula logits únicamente en las posiciones necesarias para
+esa pérdida, conservando el contexto causal completo. Una prueba compara
+su valor y sus gradientes con el cálculo completo enmascarado. El padding
+se enmascara por posición, conservando el EOS real aunque comparta su
+identificador con el token de relleno.
+
+\paragraph{Optimización y memoria.} Se confirmó una época de AdamW con
+tasa constante $2\times10^{-4}$, decaimiento de pesos cero, recorte de norma
+de gradiente a 1, lote físico de un mensaje y acumulación de 16. El último
+grupo parcial se normaliza por su tamaño real. Se usa gradient
+checkpointing no reentrante para recalcular activaciones en backward y
+reducir memoria. Se guardan adaptadores y estados de progreso cada 50
+pasos, fuera de Git.
+
+La prueba de capacidad ejecutó forward, backward, acumulación y dos pasos
+de AdamW con el ejemplo de ajuste más largo (314 tokens), alcanzando
+10.1925 GiB asignados y 10.3359 GiB reservados. Después restauró las
+matrices LoRA y el estado aleatorio antes del ajuste definitivo. Los pesos
+y buffers del modelo preparado ocupan 9.18 GiB. La revisión del modelo
+base y las versiones de 3.2 se conservan; se añadió solo PEFT 0.21.0.
+
+\paragraph{Evaluación.} Se comparan las respuestas de la base de 3.2 y del
+modelo ajustado sobre las mismas 1672 filas reservadas. Se conservan
+generación voraz, hasta ocho tokens y la misma interpretación de respuestas.
+Las métricas son tasa de aciertos y F1 con spam positivo. Al tratarse de una
+sola partición, no se presentan desviaciones entre 30 entrenamientos.
+
+\paragraph{Entrenamiento.} La época completa tuvo 196 pasos de AdamW y tardó
+3498.5\,s en la RTX 3080 Ti, incluyendo la validación final y excluyendo
+carga, capacidad y validación inicial. Los picos fueron 10.19\,GiB asignados
+y 10.37\,GiB reservados. La pérdida de validación sobre las 781 filas
+reservadas bajó de 0.5163 antes del ajuste a 0.0446 después de la época
+(Figura~\ref{fig:p33-perdida}). La pérdida por paso cae en los primeros
+diez pasos y luego queda cerca de cero, con picos aislados (máximo 0.39
+después del paso 10). Dos puntos de validación no bastan para describir
+una curva de sobreajuste.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{qwen-14b-con-lora-evolucion-de-la-perdida.png}
+\caption{Pérdida de entrenamiento por paso y de validación antes y después
+de la única época. La validación usa solo filas del entrenamiento externo.}
+\label{fig:p33-perdida}
+\end{figure}
+
+\paragraph{Resultados.} La inferencia de las 1672 filas de prueba tardó
+224.2\,s con lote 4 (pico de 9.81\,GiB asignados) y produjo solo respuestas
+\texttt{ham} o \texttt{spam}, sin ambiguas. Después se liberó el modelo.
+La Tabla~\ref{tab:p33} compara la base de 3.2 y el modelo ajustado sobre las
+mismas filas. Las métricas se recalcularon en CPU desde las cachés
+transferidas con SHA-256 y coinciden con las tablas exportadas.
+
+\begin{table}[H]
+\centering
+\caption{Qwen2.5-14B-Instruct NF4 antes y después de LoRA, en la prueba fija
+de 1672 filas (1448 ham y 224 spam). Un entrenamiento y una partición.}
+\label{tab:p33}
+\begin{tabular}{lcccccc}
+\toprule
+Modelo & Tasa de aciertos & F1 & VP & FP & FN & VN\\
+\midrule
+Sin ajuste & 0.8935 & 0.7120 & 220 & 174 & 4 & 1274\\
+Con LoRA & 0.9922 & 0.9708 & 216 & 5 & 8 & 1443\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El ajuste ataca el problema principal de 3.1 y 3.2: los falsos positivos
+bajan de 174 a 5 (del 12.0\,\% al 0.3\,\% de los ham) y la precisión para
+spam sube de 55.8\,\% a 97.7\,\%. A cambio, los falsos negativos pasan de
+4 a 8, y el recobrado de spam baja de 98.2\,\% a 96.4\,\%. En las filas
+emparejadas, LoRA corrige 172 errores de la base e introduce 7 nuevos
+(Figura~\ref{fig:p33-confusion}).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\linewidth]{qwen-14b-nf4-sin-ajuste-confusion-en-la-prueba-reservada.png}\hfill
+\includegraphics[width=0.48\linewidth]{qwen-14b-nf4-con-lora-confusion-en-la-prueba-reservada.png}
+\caption{Matrices de confusión de Qwen 14B NF4 sin ajuste (izquierda) y con
+LoRA (derecha) en la misma prueba reservada.}
+\label{fig:p33-confusion}
+\end{figure}
+
+\paragraph{Limitaciones.} Hay un solo entrenamiento, así que no se mide la
+variación entre entrenamientos ni entre particiones. Los hiperparámetros se
+fijaron antes de entrenar, y la prueba no se usó para elegirlos ni para elegir
+checkpoints. En las 1545 filas de prueba sin texto presente en el ajuste,
+la mejora se mantiene: F1 de 0.7024 a 0.9688 y tasa de aciertos de 0.8958
+a 0.9922. Solo 1 de los 13 errores del modelo ajustado corresponde a una
+fila repetida. La regresión logística del punto~1 promedia F1
+$0.9641\pm0.0063$ en 30 particiones; la cifra de 3.3 sale de una partición,
+así que la comparación es descriptiva. Además, el ajuste exige GPU, casi
+una hora de entrenamiento y 34\,406\,400 parámetros LoRA, mientras que la
+regresión trabaja sobre características ya calculadas.

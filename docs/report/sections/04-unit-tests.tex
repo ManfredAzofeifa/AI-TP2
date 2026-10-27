@@ -16,7 +16,7 @@ modelos y las corridas experimentales. Así las pruebas verifican las
 funciones entregadas en el cuaderno sin mantener una copia separada en
 archivos por punto. Las pruebas de estructura comprueban que el notebook
 sea válido, que no importe el antiguo paquete y que las definiciones no se
-dupliquen. La última ejecución de \texttt{pytest} (26/10/2026) dio 64 pruebas
+dupliquen. La última ejecución local de \texttt{pytest} (26/10/2026) dio 77 pruebas
 superadas, ninguna pendiente y ninguna fallida.
 
 El ejecutor del notebook usa pytest para resolver fixtures como
@@ -27,7 +27,19 @@ pruebas para no usar definiciones antiguas en un kernel persistente.
 También se verifica que tokenizador y pesos compartan la misma revisión,
 aunque Transformers no conserve \texttt{config.\_commit\_hash}. Las dos
 verificaciones usan simulaciones o archivos temporales, sin descargar modelos.
-La celda del notebook ejecutada en WSL también dio 64/0/0.
+La celda del notebook ejecutada en WSL dio 64/0/0 al cerrar 3.2.
+
+Las trece pruebas adicionales de \path{tests/test_punto3_finetuning.py}
+comprueban el objetivo causal enmascarado, la conservación de EOS real
+cuando comparte identificador con padding, el rechazo de etiquetas o
+longitudes incompatibles, la equivalencia de pérdida y gradientes con
+el cálculo completo, la restauración después de la prueba de capacidad,
+la acumulación en el último grupo parcial, la separación de filas de
+ajuste/validación/prueba, la base BF16 congelada, el contrato de clasificación
+y el título exportable de la figura. También rechazan respuestas e
+historial procedentes de adaptadores distintos. Usan modelos diminutos o simulaciones,
+sin descargar pesos. La celda de pruebas del kernel WSL, con el notebook y
+las pruebas sincronizados, también dio 77/0/0 (26/10/2026).
 
 \subsection{Evaluación del modelo}
 

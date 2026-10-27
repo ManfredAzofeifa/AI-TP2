@@ -83,12 +83,12 @@ verificación pendiente de `TODO.md`.
   0.5452 ± 0.0090. Sin respuestas ambiguas; 1168 falsos positivos y 30 falsos
   negativos en todo el dataset. Figuras, CSV y análisis de 3.1 completados.
   La nueva ejecución reproduce exactamente la caché anterior y libera el modelo.
-- **Pendiente:** 3.3 (extra), comparación/conclusiones globales y cierre.
-  3.1 está respaldado en `origin/main`; la persona autoriza el commit y la
-  publicación de 3.2 en `origin/main` antes de trabajar en 3.3. Para 3.3
-  se deben consultar modelo, técnica y protocolo experimental con el equipo.
-- **Pruebas verificadas (26/10/2026):** 64 superadas, 0 pendientes, 0 fallidas
-  (48/1/0 antes del punto 3.1). `tests/conftest.py` fija el backend `Agg`.
+- **Pendiente:** comparación/conclusiones globales y cierre. 3.1, 3.2
+  (`88b6ee9`) y 3.3 están en `origin/main`; la persona autorizó el 26/10/2026
+  el commit y push del cierre verificado de 3.3. Esa autorización no cubre
+  publicaciones posteriores.
+- **Pruebas verificadas (26/10/2026):** 77 superadas, 0 pendientes, 0 fallidas,
+  en Mac y en la celda WSL (64/0/0 al cerrar 3.2; 48/1/0 antes de 3.1). `tests/conftest.py` fija el backend `Agg`.
   Puntos 1 y 2 y pruebas se repitieron desde un kernel nuevo con caché local;
   la tabla de pruebas también da 48/1/0. Las figuras regeneradas de esa
   auditoría están en `codex/audit-puntos-1-2`; main conserva sus PNG previos.
@@ -179,6 +179,19 @@ verificación pendiente de `TODO.md`.
   los widgets Xet. Se recuperaron los tres blobs de Mistral verificados por
   SHA-256 y se desactivó ese progreso en las cargas siguientes. Conservar
   las cachés; cambiar la conexión de red no exige reiniciar las sesiones.
+- **3.3 completo (26/10/2026):** Qwen 14B con LoRA sobre NF4 (rango 8,
+  alpha 16, tasa 2e-4, una época, lote 1, acumulación 16), PEFT 0.21.0 y
+  bucle explícito; partición externa 70/30 fija con 20 % de validación del
+  entrenamiento. Solo se supervisa ham/spam y EOS; base NF4/BF16 congelada.
+  Época: 196 pasos en 3498.5 s, picos 10.19/10.37 GiB; validación
+  0.5163 → 0.0446. Prueba de 1672 filas: F1 0.7120 → 0.9708, accuracy
+  0.8935 → 0.9922, FP 174 → 5, FN 4 → 8; en 1545 filas sin texto de ajuste,
+  F1 0.7024 → 0.9688. Un solo entrenamiento: comparación descriptiva.
+  Run `qwen14b-dda32081338adef6` en `data/processed/lora/` de WSL; al Mac
+  solo pasaron JSON, CSV y PNG pequeños (SHA-256) y las métricas se
+  recalcularon en CPU. Adaptador y checkpoints no salen de WSL ni de Git.
+  `RUN_LORA_TRAINING = False`; si faltan respuestas, la celda de ajuste
+  reutiliza `training.json` y el adaptador. No repetir el entrenamiento.
 
 ## Próximos pasos
 
@@ -202,7 +215,8 @@ Lista completa y notas de ejecución en
    Su línea base, caché, figuras y análisis están completos; reutilizar la
    caché para evaluar sin volver a cargar el modelo.
    3.2 también está completo: reutilizar las tres cachés y las revisiones
-   registradas arriba. LoRA/DoRA sigue pendiente de decisión.
+   registradas arriba. El piloto 3.3 está completo: Qwen 14B con LoRA
+   sobre NF4 y una sola partición; reutilizar su caché sin repetir el ajuste.
    El kernel remoto ya está conectado: no exigir SSH, dominio ni cuenta
    Cloudflare para continuar. Comprobar host y CUDA desde ese kernel antes
    de experimentar; los comandos de terminal del Mac siguen siendo locales.
@@ -355,7 +369,8 @@ Lista completa y notas de ejecución en
   confirmación.
   La autorización del 26/10/2026 cubre la descarga y evaluación del modelo
   ya confirmado para 3.1 en WSL. La autorización posterior de 3.2 y sus
-  modelos figura en el estado actual; 3.3 aún requiere confirmación.
+  modelos figura en el estado actual. La selección y el piloto de 3.3
+  también están confirmados arriba; otro modelo o técnica requieren consulta.
 - HF: autenticar interactivamente en WSL con un token dedicado de lectura,
   preferiblemente de alcance limitado. No escribir tokens en celdas, argumentos,
   salidas, Git ni chat. El login de HF se guarda fuera del repositorio; quienes

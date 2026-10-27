@@ -30,7 +30,9 @@ del enunciado: su aceptación sigue pendiente. Se mantienen las
 configuraciones vigentes. Las falsas alarmas limitan la precisión de la
 línea base LLM. Tras cerrar 3.1, la persona autoriza respaldar sus cambios
 en main y completar 3.2. Mistral 7B NF4 obtiene F1 0.5518 y Qwen 14B
-NF4, 0.7126 en las mismas muestras. El extra 3.3 sigue pendiente de decisión.
+NF4, 0.7126 en las mismas muestras. En 3.3, una época de LoRA sobre Qwen 14B
+NF4 sube el F1 de 0.7120 a 0.9708 en una prueba reservada fija (un solo
+entrenamiento), sobre todo al eliminar falsas alarmas.
 \end{abstract}
 {\small\tableofcontents}
 \newpage
@@ -652,6 +654,74 @@ y desactivan las barras de Hugging Face. Mistral cargó en NF4: 3.75 GiB
 de pesos y buffers; la prueba rápida pasó con el prompt máximo de 307
 tokens y lote 16. La red se configuró sin reiniciar Jupyter ni WSL.
 
+\section{Punto 3.3: ajuste eficiente}
+El cierre de 3.2 se publicó en origin/main mediante \texttt{88b6ee9}.
+La persona confirmó Qwen 14B con LoRA sobre NF4, PEFT y un bucle explícito
+de PyTorch. Se hará un entrenamiento con partición externa 70/30 fija;
+del entrenamiento se reserva 20\,\% para validar. Se aprobaron rango 8,
+alpha 16, tasa $2\times10^{-4}$, una época, lote físico 1 y acumulación
+de 16; también opciones adicionales de revisión y configuración en la
+firma, conservando sus argumentos originales. Solo se supervisan la
+respuesta ham/spam y EOS; la prueba queda fuera del ajuste.
+
+La base y los adaptadores cargaron con 34\,406\,400 parámetros entrenables
+y 9.18 GiB de pesos y buffers. La prueba de capacidad pasó con un ejemplo
+de 314 tokens, dos pasos de AdamW y dos microbatches por paso; alcanzó
+10.1925 GiB asignados y 10.3359 GiB reservados. Adaptadores y aleatoriedad
+se restauraron. La partición tiene 3121 filas de ajuste, 781 de validación
+y 1672 de prueba; 127 textos de prueba aparecen en ajuste (150 en el
+entrenamiento externo completo). Se mantiene la partición por filas y se
+informa esta limitación; no se deduplica ni se altera el dataset.
+
+PEFT 0.21.0 se instaló sin modificar las demás dependencias. La base
+permanece congelada en NF4/BF16 y solo se entrenan matrices LoRA. Se usa
+gradient checkpointing y pérdida en FP32; conservar las matrices base
+BF16 evita la promoción completa a FP32 del preparador genérico de PEFT,
+que aumenta la memoria. La capacidad se comprobó con backward,
+acumulación y AdamW, restaurando pesos y aleatoriedad antes del ajuste.
+Las pruebas locales de máscaras, pérdida causal, gradientes, partición y
+restauración, exportación de figura y procedencia de cachés dan 77 superadas.
+
+\subsection{Ejecución y resultados de 3.3}
+La época completa se ejecutó en la celda de ajuste sin interrupciones:
+196 pasos de AdamW, 3498.5\,s de ajuste y validación final, picos de
+10.19\,GiB asignados y 10.37\,GiB reservados. La pérdida de validación
+bajó de 0.5163 a 0.0446. Se guardaron adaptador, historial y checkpoints
+cada 50 pasos en \texttt{data/processed/lora/qwen14b-dda32081338adef6/}
+de WSL. Después se clasificaron las 1672 filas de prueba en 224.2\,s
+(lote 4, pico de 9.81\,GiB asignados) y se liberó el modelo de la GPU.
+
+\begin{table}[H]
+\centering
+\caption{Qwen 14B NF4 antes y después de LoRA en la prueba fija.}
+\begin{tabular}{lcccccc}
+\toprule
+Modelo & Tasa de aciertos & F1 & VP & FP & FN & VN\\
+\midrule
+Sin ajuste & 0.8935 & 0.7120 & 220 & 174 & 4 & 1274\\
+Con LoRA & 0.9922 & 0.9708 & 216 & 5 & 8 & 1443\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los falsos positivos bajan de 174 a 5 y los falsos negativos suben de 4 a 8.
+En las filas emparejadas, el ajuste corrige 172 errores de la base e
+introduce 7. En las 1545 filas sin texto presente en ajuste, F1 pasa de
+0.7024 a 0.9688; solo 1 de los 13 errores del modelo ajustado está en una
+fila repetida. No hubo respuestas ambiguas. Al ser un único entrenamiento,
+la comparación con las 30 corridas de los puntos 1 y 2 es descriptiva.
+
+\paragraph{Verificación.} Los 14 artefactos pequeños (cuatro JSON, siete CSV
+y tres PNG) se transfirieron a Mac con SHA-256; adaptador, checkpoints y
+pesos se quedan en WSL. En CPU se reprodujo el identificador del
+experimento con las funciones del notebook y \texttt{load\_sms\_spam}; se
+validaron solicitud, hashes del adaptador e historial, y se recalcularon
+las métricas (diferencia máxima $1.1\times10^{-16}$). Las tres figuras se
+revisaron visualmente. Después, \texttt{RUN\_LORA\_TRAINING} quedó en
+falso y la celda de ajuste reutiliza el adaptador guardado si faltan
+respuestas. Las celdas cambiadas y las pruebas nuevas se sincronizaron con
+WSL, con respaldo previo de sus archivos, y su celda de pruebas dio 77/0/0.
+
 \section{Puntos pendientes}
 El punto 2 está implementado; su conformidad literal requiere resolver la
 variante de dimensión. Lo que falta, en orden (detalle en \texttt{TODO.md}):
@@ -661,8 +731,8 @@ La referencia con $D=384$ ya tiene 30 corridas; la persona
 confirmó mantener la configuración vigente y no adoptar las alternativas.
 \item Avisar al equipo que el detector vigente usa 2 componentes y la
 regresión 384; las constantes no se cambiaron durante la auditoría.
-\item Puntos 3.1 y 3.2 completos; publicación de 3.2 autorizada antes de 3.3.
-El extra 3.3 (LoRA o DoRA) sigue pendiente de decisión.
+\item Puntos 3.1, 3.2 y 3.3 completos y publicados en origin/main; el
+cierre de 3.3 se publicó por solicitud expresa de la persona.
 \item Completar la comparación de métodos y las conclusiones del informe.
 \item Confirmar integrantes y fecha de entrega; después, ejecución final
 completa, Doxygen, PDF final y \texttt{.zip}.
@@ -793,6 +863,16 @@ Recuperar pesos de Mistral por SHA-256, sin repetir la descarga.\\
 26/10/2026 & Publicar el cierre verificado de 3.2 antes de iniciar 3.3. &
 Solicitud expresa de la persona: commit y push; consultar modelo, técnica
 y evaluación del ajuste eficiente antes de entrenar.\\
+26/10/2026 & Qwen 14B con LoRA sobre NF4; una partición fija 70/30. &
+Elección de la persona: PEFT y bucle explícito de PyTorch; rango 8,
+alpha 16, tasa $2\times10^{-4}$, una época, lote 1 y acumulación de 16;
+validación solo del entrenamiento. La capacidad física pasó.\\
+26/10/2026 & Completar el piloto 3.3 y evaluarlo una sola vez en la prueba
+reservada. & F1 0.7120 $\to$ 0.9708 y FP 174 $\to$ 5. Sin reentrenar ni
+ajustar parámetros con la prueba; \texttt{RUN\_LORA\_TRAINING} desactivado
+y reutilización del adaptador guardado.\\
+26/10/2026 & Publicar el cierre verificado de 3.3 en origin/main. &
+Solicitud expresa de la persona: commit y push, como en 3.2.\\
 \bottomrule
 \end{longtable}
 \normalsize
@@ -801,9 +881,9 @@ y evaluación del ajuste eficiente antes de entrenar.\\
 \section{Verificación y reproducción}
 % VERIFICACION_ACTUAL
 \begin{itemize}
-\item \texttt{pytest} (26/10/2026, con 3.1 y 3.2): 64
+\item \texttt{pytest} (26/10/2026, con 3.1 a 3.3): 77
 superadas, 0 pendientes y 0 fallidas, también en la celda WSL.
-Al cerrar 3.1 eran 58/0/0; antes del punto 3.1, 48/1/0. La
+Al cerrar 3.2 eran 64/0/0; al cerrar 3.1, 58/0/0; antes del punto 3.1, 48/1/0. La
 prueba de la derivada reprodujo el fallo antes de la corrección y pasa
 después. Las pruebas usan el backend \texttt{Agg} de Matplotlib.
 \item Notebook guardado validado con \texttt{nbformat}, IDs únicos y AST.
@@ -829,8 +909,8 @@ experimentales a mano.
 \item Revisión e informe preliminar compilados mediante los dos comandos
 \texttt{./build\_pdf.sh review} y \texttt{./build\_pdf.sh}; revisión visual
 de las páginas renderizadas.
-Los puntos 3.1 y 3.2 se ejecutaron y documentaron; la comparación global y
-las conclusiones finales permanecen pendientes, junto con la decisión de 3.3.
+Los puntos 3.1, 3.2 y 3.3 se ejecutaron y documentaron; la comparación
+global y las conclusiones finales permanecen pendientes.
 \end{itemize}
 % FIN_VERIFICACION_ACTUAL
 

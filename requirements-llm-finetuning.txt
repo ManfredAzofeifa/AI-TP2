@@ -1,0 +1,4 @@
+# Ajuste 3.3 aprobado: LoRA sobre Qwen 14B NF4, con PyTorch explícito.
+# El plan verificado añade solo PEFT al entorno WSL ya preparado para 3.2.
+-r requirements-llm-quantized.txt
+peft==0.21.0

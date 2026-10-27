@@ -21,7 +21,8 @@ configuración, experimentos y análisis. Las pruebas externas cargan las
 mismas definiciones sin ejecutar descargas ni experimentos. Las métricas,
 figuras y tablas provienen de la ejecución completa de sus secciones. La
 línea base 3.1 ya se evaluó en GPU; 3.2 agrega dos modelos con cuantización
-NF4 y el extra 3.3 sigue pendiente de decisión.
+NF4 y 3.3 ajusta Qwen 14B con LoRA en una partición fija, con F1 de 0.9708
+en su prueba reservada frente a 0.7120 sin ajuste.
 
 \subsection{Protocolo común}
 
@@ -52,5 +53,6 @@ NF4 y el extra 3.3 sigue pendiente de decisión.
     ham. Las 30 muestras estratificadas del 30~\% usan las semillas de los
     puntos 1 y 2 (Sección~\ref{sec:punto3}). Para 3.2 se confirmaron
     Mistral-7B-Instruct-v0.3 y Qwen2.5-14B-Instruct, ambos con NF4 de 4 bits
-    y cálculo bfloat16. El ajuste de 3.3 sigue pendiente de decisión.
+    y cálculo bfloat16. Para 3.3 se confirmó ajustar Qwen 14B con LoRA
+    sobre NF4 y un entrenamiento con prueba reservada (Sección~\ref{sec:punto33}).
 \end{itemize}

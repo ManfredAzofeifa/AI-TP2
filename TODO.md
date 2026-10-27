@@ -15,6 +15,26 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
 
 ## Estado actual
 
+- **3.3 completo (26/10/2026):** respaldo 3.2 publicado en
+  `origin/main` (`88b6ee9`). Selección confirmada: Qwen 14B con LoRA sobre
+  NF4, PEFT y bucle explícito en PyTorch; un ajuste con partición 70/30
+  fija y validación del 20 % tomada solo de su entrenamiento. Se aprobaron
+  rango 8, alpha 16, tasa 2e-4, una época, lote 1, acumulación de 16 y
+  opciones adicionales de revisión/configuración en la firma existente.
+  PEFT 0.21.0 instalado sin cambiar otras dependencias. Capacidad: picos
+  10.1925/10.3359 GiB. Época completa: 196 pasos, 3498.5 s, picos
+  10.19/10.37 GiB; validación 0.5163 → 0.0446. Prueba fija de 1672 filas:
+  sin ajuste accuracy 0.8935 y F1 0.7120 (FP 174, FN 4); con LoRA accuracy
+  0.9922 y F1 0.9708 (FP 5, FN 8). En las 1545 filas sin texto presente en
+  ajuste, F1 0.7024 → 0.9688. Inferencia 224.2 s; sin respuestas ambiguas.
+  Un solo entrenamiento y una partición: comparación descriptiva. Run
+  `qwen14b-dda32081338adef6`; 14 artefactos pequeños transferidos con
+  SHA-256 y métricas recalculadas en CPU (diferencia máxima 1.1e-16).
+  Adaptador, checkpoints y pesos permanecen solo en WSL. Modelo liberado.
+  `RUN_LORA_TRAINING = False`; la celda de ajuste reutiliza el adaptador
+  guardado si faltan respuestas. Pruebas: 77/0/0 en Mac y en la celda WSL
+  tras sincronizar notebook y pruebas (respaldo WSL en `build/sync-backup-*`).
+
 - **Migración (24/10/2026):** utilidades y puntos 1 a 3 se concentran en
   `notebooks/tp2_detector_spam.ipynb`; las pruebas cargan sus definiciones.
 - **1.1–1.2 confirmado:** logística básica con sesgo, `Xw+b`, sigmoide y
@@ -55,10 +75,9 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   ambiguas; 1168 ham marcados como spam y 30 spam escapados en todo el dataset.
   Las respuestas se guardan en `data/processed/llm/` y la evaluación (30
   muestras del 30 %) se ejecuta sin GPU a partir de esa caché.
-- **Pendiente:** 3.3 (extra), comparación/conclusiones globales y cierre.
-  3.1 está respaldado en `origin/main`; se autoriza publicar el estado
-  verificado de 3.2 en `origin/main` antes de iniciar 3.3. La persona pide
-  consultar las decisiones de fine-tuning y apegarse al enunciado y al curso.
+- **Pendiente:** comparación/conclusiones globales y cierre. 3.1, 3.2 y
+  3.3 están en `origin/main`; el cierre verificado de 3.3 se publicó por
+  solicitud expresa de la persona (26/10/2026).
 - **3.2 completo (26/10/2026):** respaldo de 3.1 publicado en `origin/main`
   (`2534503`). La persona confirmó Mistral-7B-Instruct-v0.3 y
   Qwen2.5-14B-Instruct, ambos NF4 con doble cuantización y cálculo bfloat16.
@@ -82,8 +101,8 @@ también ese archivo y la revisión interna (`docs/report/review.tex` y su PDF).
   El kernel anterior ya no existía; los tres pesos completos de Mistral se
   recuperaron desde archivos protegidos y verificados por SHA-256. La carga
   NF4 y la prueba rápida funcionan con progreso de Hugging Face desactivado.
-- **Pruebas verificadas (26/10/2026):** 64 superadas, 0 pendientes, 0 fallidas
-  (antes del punto 3.1: 48/1/0). `tests/conftest.py` usa el backend `Agg`.
+- **Pruebas verificadas (26/10/2026):** 77 superadas, 0 pendientes, 0 fallidas
+  en Mac y en la celda WSL (64/0/0 al cerrar 3.2; antes del punto 3.1: 48/1/0). `tests/conftest.py` usa el backend `Agg`.
   La ejecución original de las 120 corridas UCI no dependió de 1.3.
   La auditoría repitió 1 y 2 en orden desde un kernel nuevo y las pruebas
   del notebook también dieron 48/1/0.
@@ -150,8 +169,8 @@ Lo que falta, en orden. Quien tome el repositorio empieza por aquí.
    respuestas en caché local, 30 muestras, figuras y análisis verificados.
    Reutilizar la caché para evaluar sin cargar el modelo. La persona
    respaldó primero 3.1 en `origin/main` y confirmó Mistral 7B y Qwen 14B
-   en NF4 para 3.2. LoRA/DoRA (3.3) sigue pendiente (ver
-   [Decisiones pendientes](#decisiones-pendientes-del-equipo)).
+   en NF4 para 3.2. El piloto de 3.3 está completo: F1 0.7120 → 0.9708 en
+   su prueba reservada; reutilizar su caché y no repetir el ajuste.
 4. **Informe:** completar `05-comparison.tex` (todos los métodos) y
    `06-conclusions.tex`, y el resumen de conclusiones al final del notebook.
    Dependen del punto 3.
@@ -304,7 +323,8 @@ sección "Objetivo y protocolo" del notebook y en el informe.
       `Qwen/Qwen2.5-14B-Instruct`, ambos NF4 de 4 bits con doble cuantización;
       conservar el prompt y la regla de ambigüedad de 3.1. Descargar y evaluar
       en WSL de forma secuencial, con revisiones fijadas y lotes pequeños.
-- [ ] `LORA_MODEL` y LoRA o DoRA (3.3, extra).
+- [x] `LORA_MODEL`: Qwen 14B con LoRA sobre NF4; PEFT y bucle PyTorch,
+      una partición externa 70/30 fija y los hiperparámetros del piloto aprobados.
 
 ## Punto 1 - sección 1 del notebook (60 puntos)
 
@@ -392,10 +412,11 @@ nueve veces las inferencias de reclasificar las 30 muestras del 30 %.
         en el notebook y en `03-punto3-modelos-lenguaje.tex` con números reales.
 - [x] **3.2 (10 extra)** Mistral 7B y Qwen 14B en NF4: ejecución completa,
       mismas 30 muestras, comparación pareada, figuras, tablas y análisis.
-- [ ] **3.3 (10 extra)** `finetune_with_lora` y `classify_finetuned` con
-      LoRA o DoRA; fijar `LORA_MODEL`; reportar y analizar. Si no se hace, la
-      celda se omite sola y el notebook sigue.
-- [x] Informe: 3.1 y 3.2 en `03-punto3-modelos-lenguaje.tex`; 3.3 pendiente.
+- [x] **3.3 (10 extra)** `finetune_with_lora` y `classify_finetuned` con
+      LoRA sobre Qwen 14B NF4; piloto ejecutado, reportado y analizado.
+      La caché permite evaluar sin repetir el ajuste; `RUN_LORA_TRAINING`
+      quedó desactivado.
+- [x] Informe: 3.1, 3.2 y 3.3 en `03-punto3-modelos-lenguaje.tex`.
 
 ## Integración
 
@@ -436,7 +457,10 @@ Registro de verificaciones realizadas y trabajo pendiente:
 - [x] Autorizar el respaldo del cierre de 3.1 mediante commit y push a
       `origin/main` antes de iniciar 3.2 (26/10/2026).
 - [x] Punto 3.2: confirmar Mistral 7B y Qwen 14B con NF4.
-- [ ] Punto 3.3: decidir modelo base y LoRA/DoRA en equipo.
+- [x] Punto 3.3: modelo Qwen 14B, LoRA sobre NF4 y protocolo confirmados.
+- [x] Punto 3.3: época, inferencia y evaluación completas en WSL; figuras
+      revisadas, artefactos transferidos con SHA-256, métricas recalculadas
+      en CPU, notebook y pruebas sincronizados en WSL (77/0/0).
 - [x] Autenticación HF en WSL mediante login interactivo (confirmación de la
       persona), con token dedicado
       de lectura/alcance limitado; no pegar secretos en notebook, Git ni chat.
